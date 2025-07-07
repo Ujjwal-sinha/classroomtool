@@ -1,0 +1,12 @@
+streamlit==1.31.0
+langchain==0.3.0
+langchain-groq==0.2.0
+transformers==4.44.2
+torch==2.4.1
+pillow==10.4.0
+python-dotenv==1.0.1
+matplotlib==3.9.2
+fpdf==1.7.2
+pandas==2.2.3
+numpy==1.26.4
+timm==1.0.9
