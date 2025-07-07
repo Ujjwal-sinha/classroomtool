@@ -30,7 +30,7 @@ def load_models():
     """Initialize AI models without caching"""
     models = {}
     try:
-        models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
+        models['llm'] = ChatGroq(model_name="gemma2-9b-it", api_key=groq_api_key)
     except Exception as e:
         st.error(f"Failed to load LLM: {e}")
         models['llm'] = None
