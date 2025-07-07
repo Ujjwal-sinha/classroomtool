@@ -10,3 +10,7 @@ fpdf==1.7.2
 pandas==2.2.3
 numpy==1.26.4
 timm==1.0.9
+google-trans-new==1.1.9
+gtts==2.5.1
+groq==0.29.0
+httpx>=0.23.0,<1.0.0

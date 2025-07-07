@@ -13,6 +13,9 @@ import re
 import torch
 import traceback
 from typing import Dict, List, Any
+from google_trans_new import google_translator
+from gtts import gTTS
+import base64
 
 # ------------------------ Setup ------------------------ #
 st.set_page_config(page_title="📚 Sahayak: AI Education Platform", layout="wide")
@@ -23,6 +26,9 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 if not groq_api_key:
     st.error("GROQ_API_KEY not found in .env file. Please set it up.")
     st.stop()
+
+# Initialize Google Translate
+translator = google_translator()
 
 # ------------------------ Model Initialization ------------------------ #
 @st.cache_resource
@@ -60,8 +66,8 @@ if "student_profiles" not in st.session_state:
     st.session_state.student_profiles = {}
 if "last_results" not in st.session_state:
     st.session_state.last_results = {}
-if "grade_level" not in st.session_state:
-    st.session_state.grade_level = "Grade 5"
+if "class_level" not in st.session_state:
+    st.session_state.class_level = "Class 5"
 if "language" not in st.session_state:
     st.session_state.language = "English"
 
@@ -185,6 +191,32 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
         st.error(f"PDF generation failed: {e}")
         return ""
 
+def translate_text(text: str, target_lang: str = "en") -> str:
+    """Translate text to target language using Google Translate"""
+    try:
+        translation = translator.translate(text, dest=target_lang)
+        return translation.text
+    except Exception as e:
+        st.error(f"Translation failed: {str(e)}")
+        return text
+
+def text_to_speech(text: str, lang: str = "en") -> str:
+    """Convert text to speech using gTTS and return base64 encoded audio"""
+    try:
+        tts = gTTS(text=text, lang=lang, slow=False)
+        audio_bytes = io.BytesIO()
+        tts.write_to_fp(audio_bytes)
+        audio_bytes.seek(0)
+        return base64.b64encode(audio_bytes.read()).decode("utf-8")
+    except Exception as e:
+        st.error(f"Text-to-speech failed: {str(e)}")
+        return ""
+
+def play_audio(audio_base64: str):
+    """Display audio player for base64 encoded audio"""
+    audio_bytes = base64.b64decode(audio_base64)
+    st.audio(audio_bytes, format="audio/mp3")
+
 # ------------------------ Streamlit UI ------------------------ #
 st.title("📚 Sahayak: AI-Powered Education Platform")
 st.caption("Empowering teachers in multi-grade, low-resource classrooms with automated assessments and analytics")
@@ -211,13 +243,13 @@ with tab1:
     elif input_type == "Text Description":
         input_data = st.text_area(
             "Describe the content or topic",
-            placeholder="E.g. Chapter 3: Fractions for Grade 5",
+            placeholder="E.g. Chapter 3: Fractions for Class 5",
             key="test_creation_text"
         )
     elif input_type == "Voice Instruction (Text Proxy)":
         input_data = st.text_area(
             "Enter voice instruction as text",
-            placeholder="E.g. Create a test on photosynthesis for Grade 7",
+            placeholder="E.g. Create a test on photosynthesis for Class 7",
             key="test_creation_voice"
         )
     else:
@@ -229,7 +261,7 @@ with tab1:
     
     context = st.text_area(
         "Additional Context",
-        placeholder="E.g. Grade 5, focus on fractions, include culturally relevant examples",
+        placeholder="E.g. Class 5, focus on fractions, include culturally relevant examples",
         key="test_creation_context"
     )
     num_questions = st.number_input(
@@ -239,6 +271,21 @@ with tab1:
         value=5,
         key="test_creation_num_questions"
     )
+    
+    # Add multilingual support and TTS options
+    col1, col2 = st.columns(2)
+    with col1:
+        tts_language = st.selectbox(
+            "Text-to-Speech Language",
+            ["en", "hi", "ta", "bn", "te", "mr", "gu", "kn", "ml", "pa"],
+            key="tts_language"
+        )
+    with col2:
+        translate_to = st.selectbox(
+            "Translate Questions To",
+            ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
+            key="translate_to"
+        )
     
     if st.button("Generate Test", disabled=not input_data, key="test_creation_generate"):
         with st.spinner("Generating test..."):
@@ -251,10 +298,7 @@ with tab1:
                 else:
                     content = input_data
                 
-                # Debug: Display input content
-                st.write(f"**Debug Input Content**: {content}")
-                
-                prompt = f"""You are TestCraft, an AI agent for generating grade-differentiated assessments. Create a test suite based on the provided input and context. Ensure questions are culturally relevant, tailored to student profiles (grade level, difficulty), and include a mix of question types (MCQ, short answer, essay). Output **only** the test suite in this exact format, with no additional text or comments:
+                prompt = f"""You are TestCraft, an AI agent for generating class-differentiated assessments. Create a test suite based on the provided input and context. Ensure questions are culturally relevant, tailored to student profiles (class level, difficulty), and include a mix of question types (MCQ, short answer, essay). Output **only** the test suite in this exact format, with no additional text or comments:
 
 **Test Suite**:
 - Question 1: [Question text]
@@ -264,36 +308,18 @@ with tab1:
   Difficulty: [Easy/Medium/Hard]
 - Question 2: ...
 
-Example Output:
-**Test Suite**:
-- Question 1: If a farmer has 3/4 kg of rice and divides it among 3 children, how much does each get?
-  Type: Short Answer
-  Options: []
-  Correct Answer: 1/4 kg
-  Difficulty: Medium
-- Question 2: Which crop is commonly grown in rural India?
-  Type: MCQ
-  Options: [Rice; Wheat; Corn; Potato]
-  Correct Answer: Rice
-  Difficulty: Easy
-
 Input: {content}
-Context: {context or 'No context provided'}, Grade Level: {st.session_state.grade_level}
+Context: {context or 'No context provided'}, Class Level: {st.session_state.class_level}
 Number of questions: {num_questions}
 
 Instructions:
-1. Incorporate hyper-local, culturally relevant examples (e.g., local crops like rice for biology, regional history for social studies).
-2. Tailor questions to the specified grade level and context.
-3. Balance question types (at least one MCQ, one short answer, one essay if num_questions >= 3).
-4. Ensure each question has a question text, type, options (if MCQ), correct answer, and difficulty.
-5. Output **only** the test suite in the exact format shown in the example, with no additional text, headings, or explanations."""
+1. Incorporate hyper-local, culturally relevant examples
+2. Tailor questions to the specified class level and context
+3. Balance question types (at least one MCQ, one short answer, one essay if num_questions >= 3)
+4. Ensure each question has a question text, type, options (if MCQ), correct answer, and difficulty
+5. Output **only** the test suite in the exact format shown above"""
                 
                 test_content = query_langchain(prompt)
-                
-                # Debug: Display raw LLM output
-                st.write("**Debug Raw LLM Output**:")
-                st.code(test_content)
-                
                 questions = extract_questions_and_answers(test_content)
                 if questions and "error" in questions[0]:
                     st.error(f"Failed to parse questions: {questions[0]['error']}")
@@ -301,6 +327,39 @@ Instructions:
                 
                 st.subheader("Generated Test")
                 st.markdown(test_content)
+                
+                # Add TTS and translation functionality
+                if questions:
+                    st.subheader("Multilingual Features")
+                    selected_question = st.selectbox(
+                        "Select a question to hear or translate",
+                        [f"Q{i+1}: {q['question'][:50]}..." for i, q in enumerate(questions)],
+                        key="question_selector"
+                    )
+                    q_index = int(selected_question.split(":")[0][1:]) - 1
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🔊 Listen to Question"):
+                            audio_base64 = text_to_speech(questions[q_index]["question"], lang=tts_language)
+                            if audio_base64:
+                                play_audio(audio_base64)
+                    with col2:
+                        if st.button(f"Translate to {translate_to}"):
+                            lang_codes = {
+                                "English": "en",
+                                "Hindi": "hi",
+                                "Tamil": "ta",
+                                "Bengali": "bn",
+                                "Telugu": "te",
+                                "Marathi": "mr",
+                                "Gujarati": "gu",
+                                "Kannada": "kn",
+                                "Malayalam": "ml",
+                                "Punjabi": "pa"
+                            }
+                            translated = translate_text(questions[q_index]["question"], target_lang=lang_codes.get(translate_to, "en"))
+                            st.markdown(f"**Translated Question**: {translated}")
                 
                 st.session_state.last_results = {
                     "type": "test",
@@ -381,6 +440,18 @@ with tab3:
             placeholder="E.g. 2 points for correct answer, 1 point for partial",
             key="grading_rubric"
         )
+        
+        # Add language detection for multilingual responses
+        if student_response:
+            try:
+                detected_lang = translator.detect(student_response).lang
+                st.write(f"Detected language: {detected_lang}")
+                if detected_lang != "en":
+                    translated_response = translate_text(student_response)
+                    st.write(f"Translated to English: {translated_response}")
+            except:
+                pass
+        
         if st.button(
             "Grade Response",
             disabled=not (student_response and correct_answer and rubric),
@@ -524,17 +595,17 @@ Topic: {topic}"""
 with st.sidebar:
     st.header("Teacher Dashboard")
     st.subheader("Class Settings")
-    grade_level = st.selectbox(
-        "Grade Level",
-        ["Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7"],
-        key="dashboard_grade_level"
+    class_level = st.selectbox(
+        "Class Level",
+        [f"Class {i}" for i in range(1, 13)],  # Classes 1 through 12
+        key="dashboard_class_level"
     )
     language = st.selectbox(
         "Feedback Language",
-        ["English", "Hindi", "Tamil", "Bengali"],
+        ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
         key="dashboard_language"
     )
-    st.session_state.grade_level = grade_level
+    st.session_state.class_level = class_level
     st.session_state.language = language
     
     st.subheader("Test History")
