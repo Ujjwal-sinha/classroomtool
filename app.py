@@ -18,6 +18,15 @@ from gtts import gTTS
 import base64
 import pytesseract
 import time
+import requests
+from playwright.sync_api import sync_playwright
+from prompts import (
+    get_test_creation_prompt,
+    get_test_creation_retry_prompt,
+    get_hint_generator_prompt,
+    get_grading_prompt,
+    get_analytics_prompt
+)
 
 # ------------------------ Setup ------------------------ #
 st.set_page_config(page_title="📚 Sahayak: AI Education Platform", layout="wide")
@@ -98,6 +107,27 @@ def process_image(image: Image.Image, use_ocr: bool = True) -> str:
         return description if description else "Error: No content extracted from image"
     except Exception as e:
         return f"Error: Image processing failed - {str(e)}"
+
+def process_url(url: str) -> str:
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, timeout=10000)
+            page.wait_for_load_state("domcontentloaded")
+            content = page.content()
+            text = page.evaluate(
+                """() => {
+                    // Remove scripts, styles, and other non-content elements
+                    document.querySelectorAll('script, style, nav, header, footer').forEach(el => el.remove());
+                    return document.body.innerText.trim();
+                }"""
+            )
+            browser.close()
+        return text[:5000] if text else "Error: No content extracted from URL"
+    except Exception as e:
+        st.error(f"Failed to fetch URL content: {str(e)}")
+        return f"Error: URL processing failed - {str(e)}"
 
 def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
     questions = []
@@ -305,15 +335,17 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Test Creation", "💡 Hint Generator", "
 
 with tab1:
     st.subheader("Create Assessments")
-    input_type = st.radio("Input Type", ["Textbook Photo", "Text Description"], key="test_creation_input_type")
+    input_type = st.radio("Input Type", ["Textbook Photo", "Text Description", "URL"], key="test_creation_input_type")
     input_data = None
     if input_type == "Textbook Photo":
         img_file = st.file_uploader("Upload textbook page", type=["jpg", "jpeg", "png"], key="test_creation_image")
         if img_file:
             input_data = Image.open(img_file)
             st.image(input_data, use_column_width=True)
-    else:
+    elif input_type == "Text Description":
         input_data = st.text_area("Describe topic", placeholder="E.g. Fractions for Class 5", key="test_creation_text")
+    else:  # URL
+        input_data = st.text_input("Enter URL", placeholder="E.g. https://example.com/science-lesson", key="test_creation_url")
     
     context = st.text_area("Context", placeholder="E.g. Class 5, use mango examples", key="test_creation_context")
     num_questions = st.number_input("Number of Questions", min_value=1, max_value=20, value=5, key="test_creation_num_questions")
@@ -323,51 +355,23 @@ with tab1:
     if st.button("Generate Test", disabled=not input_data, key="test_creation_generate"):
         with st.spinner("Generating test..."):
             try:
-                content = process_image(input_data) if input_type == "Textbook Photo" else input_data
+                if input_type == "Textbook Photo":
+                    content = process_image(input_data)
+                elif input_type == "URL":
+                    content = process_url(input_data)
+                else:
+                    content = input_data
                 if "Error" in content:
                     st.error(content)
                     st.stop()
                 
-                prompt = f"""You are TestCraft, an AI agent for generating assessments. Create a test suite based on the input and context. Ensure questions are culturally relevant and include a mix of types (MCQ, short answer, essay). Output **only** the test suite in this format:
-
-**Test Suite**:
-- Question 1: [Question text]
-  Type: [MCQ/Short Answer/Essay]
-  Options: [Option1; Option2; Option3; Option4]
-  Correct Answer: [Answer]
-  Difficulty: [Easy/Medium/Hard]
-- Question 2: ...
-
-Input: {content}
-Context: {context or 'No context provided'}, Class Level: {st.session_state.class_level}
-Number of questions: {num_questions}
-Instructions:
-1. Use culturally relevant examples (e.g., rice, mangoes).
-2. Tailor to class level and context.
-3. Balance question types.
-4. Ensure all fields are included.
-5. Use semicolons for MCQ options."""
-
+                prompt = get_test_creation_prompt(content, context, st.session_state.class_level, num_questions)
                 test_content = query_langchain(prompt)
                 questions = extract_questions_and_answers(test_content)
                 
                 if questions and "error" in questions[0]:
                     st.warning("Parsing failed. Retrying...")
-                    simplified_prompt = f"""You are TestCraft. Create a test suite with {num_questions} questions based on input and context. Output **only** the test suite in the exact format:
-
-**Test Suite**:
-- Question 1: [Question text]
-  Type: [MCQ/Short Answer/Essay]
-  Options: [Option1; Option2; Option3; Option4]
-  Correct Answer: [Answer]
-  Difficulty: [Easy/Medium/Hard]
-
-Input: {content}
-Context: {context or 'No context provided'}, Class Level: {st.session_state.class_level}
-Instructions:
-1. Include culturally relevant examples.
-2. Ensure all fields are included.
-3. Use semicolons for MCQ options."""
+                    simplified_prompt = get_test_creation_retry_prompt(content, context, st.session_state.class_level, num_questions)
                     test_content = query_langchain(simplified_prompt, retry=True)
                     questions = extract_questions_and_answers(test_content)
                 
@@ -411,12 +415,7 @@ with tab2:
     if st.button("Generate Hint", disabled=not question, key="hint_generator_generate"):
         with st.spinner("Generating hint..."):
             try:
-                prompt = f"""You are HintGuide. Generate a hint for the question and response. Avoid direct answers, use Socratic questioning. Output **only**:
-
-**Hint**: [Socratic question or guidance]
-
-Question: {question}
-Student Response: {student_response or 'No response provided'}"""
+                prompt = get_hint_generator_prompt(question, student_response)
                 hint = query_langchain(prompt)
                 if st.session_state.language != "English":
                     hint = translate_text(hint, target_lang=st.session_state.language)
@@ -469,14 +468,7 @@ with tab3:
     if responses:
         with st.spinner("Grading..."):
             try:
-                prompt = f"""You are GradeWise. Grade the response based on the correct answer and rubric. Provide feedback in English. Output **only**:
-
-**Grade**: [Score/Total]
-**Feedback**: [Feedback]
-
-Response: {responses[0]['response']}
-Correct Answer: {responses[0]['correct_answer']}
-Rubric: {responses[0]['rubric']}"""
+                prompt = get_grading_prompt(responses[0]["response"], responses[0]["correct_answer"], responses[0]["rubric"])
                 grading_result = query_langchain(prompt)
                 if st.session_state.language != "English":
                     feedback_match = re.search(r'\*\*Feedback\*\*: (.*)', grading_result, re.DOTALL)
@@ -505,17 +497,7 @@ with tab4:
     if st.button("Generate Insights", disabled=not (student_id and topic), key="analytics_generate"):
         with st.spinner("Generating insights..."):
             try:
-                prompt = f"""You are InsightTrack. Provide analytics including Learning Quotient (LQ) metrics, gaps, and suggestions. Output **only**:
-
-**Learning Quotient (LQ)**:
-- Accuracy: [X]%
-- Time Taken: [X] minutes
-- Hints Used: [X]
-**Knowledge Gaps**: [Gaps]
-**Remedial Suggestions**: [Suggestions]
-
-Student ID: {student_id}
-Topic: {topic}"""
+                prompt = get_analytics_prompt(student_id, topic)
                 insights = query_langchain(prompt)
                 translated_insights = translate_text(insights, target_lang=st.session_state.language) if st.session_state.language != "English" else insights
                 st.markdown(translated_insights)
@@ -584,3 +566,4 @@ with st.sidebar:
         st.session_state.test_history.clear()
         st.session_state.last_results = {}
         st.rerun()
+
