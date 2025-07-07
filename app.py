@@ -88,7 +88,6 @@ def process_image(image: Image.Image, use_ocr: bool = True) -> str:
     """Extract text from images using OCR or describe content using BLIP"""
     if use_ocr:
         try:
-            # Use pytesseract for OCR
             text = pytesseract.image_to_string(image, lang="eng+hin+tam+ben+tel+mar+guj+kan+mal+pan")
             if text.strip():
                 return text.strip()
@@ -96,7 +95,6 @@ def process_image(image: Image.Image, use_ocr: bool = True) -> str:
         except Exception as e:
             st.warning(f"OCR failed: {str(e)}. Falling back to BLIP captioning.")
     
-    # Fallback to BLIP if OCR fails or is disabled
     if not models['processor'] or not models['blip_model']:
         return "Error: Image processing unavailable"
     try:
@@ -116,9 +114,8 @@ def process_image(image: Image.Image, use_ocr: bool = True) -> str:
 def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
     """Extract questions, answers, and metadata from LLM output with robust parsing"""
     questions = []
-    # Primary regex: strict format
     pattern = r'Question \d+: (.*?)\n(?:Type: (.*?)\n)?Options: (.*?)\nCorrect Answer: (.*?)\nDifficulty: (.*?)(?:\n|$)'
-    matches = re.findall(pattern, text, re.DOTALL | re.MULTILINE)
+    matches = re.findall(pattern, text, re.DOTALL | re.MULTILINE | re.UNICODE)
     
     for match in matches:
         question, q_type, options, answer, difficulty = match
@@ -130,11 +127,9 @@ def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
             "difficulty": difficulty.strip() if difficulty else "Medium"
         })
     
-    # Fallback parsing if regex fails
     if not matches:
-        # More flexible regex to capture partial outputs
         fallback_pattern = r'Question \d+: (.*?)(?:\n|$)(?:Type: (.*?)(?:\n|$))?(?:Options: (.*?)(?:\n|$))?(?:Correct Answer: (.*?)(?:\n|$))?(?:Difficulty: (.*?)(?:\n|$))?'
-        fallback_matches = re.findall(fallback_pattern, text, re.DOTALL | re.MULTILINE)
+        fallback_matches = re.findall(fallback_pattern, text, re.DOTALL | re.MULTILINE | re.UNICODE)
         for match in fallback_matches:
             question, q_type, options, answer, difficulty = match
             if question.strip():
@@ -146,21 +141,20 @@ def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
                     "difficulty": difficulty.strip() if difficulty else "Medium"
                 })
     
-    # Secondary fallback: split by question blocks
     if not questions:
         question_blocks = text.split("- Question")
-        for block in question_blocks[1:]:  # Skip first split (before first question)
+        for block in question_blocks[1:]:
             block = block.strip()
             if not block:
                 continue
-            q_match = re.match(r'^\d+: (.*?)(?=\n|$)', block, re.DOTALL)
+            q_match = re.match(r'^\d+: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
             if not q_match:
                 continue
             question = q_match.group(1).strip()
-            type_match = re.search(r'Type: (.*?)(?=\n|$)', block, re.DOTALL)
-            options_match = re.search(r'Options: (.*?)(?=\n|$)', block, re.DOTALL)
-            answer_match = re.search(r'Correct Answer: (.*?)(?=\n|$)', block, re.DOTALL)
-            difficulty_match = re.search(r'Difficulty: (.*?)(?=\n|$)', block, re.DOTALL)
+            type_match = re.search(r'Type: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
+            options_match = re.search(r'Options: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
+            answer_match = re.search(r'Correct Answer: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
+            difficulty_match = re.search(r'Difficulty: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
             questions.append({
                 "question": question,
                 "type": type_match.group(1).strip() if type_match else "MCQ",
@@ -172,6 +166,31 @@ def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
     if not questions:
         return [{"error": "No questions parsed from output"}]
     return questions
+
+def translate_test_suite(questions: List[Dict[str, Any]], target_lang: str) -> List[Dict[str, Any]]:
+    """Translate all questions, options, and answers in the test suite"""
+    lang_codes = {
+        "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
+        "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
+        "Malayalam": "ml", "Punjabi": "pa"
+    }
+    target_code = lang_codes.get(target_lang, "en")
+    translated_questions = []
+    
+    for q in questions:
+        if "error" in q:
+            translated_questions.append(q)
+            continue
+        translated_q = {
+            "question": translate_text(q["question"], target_lang=target_code),
+            "type": q["type"],
+            "options": [translate_text(opt, target_lang=target_code) for opt in q["options"]],
+            "answer": translate_text(q["answer"], target_lang=target_code),
+            "difficulty": q["difficulty"]
+        }
+        translated_questions.append(translated_q)
+    
+    return translated_questions
 
 def generate_lq_chart(student_data: Dict[str, float]) -> str:
     """Generate Learning Quotient chart and save as PNG"""
@@ -227,18 +246,28 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
         return ""
 
 def translate_text(text: str, target_lang: str = "en") -> str:
-    """Translate text to target language using deep-translator"""
+    """Translate text to target language with robust error handling"""
     try:
-        translated = GoogleTranslator(source="auto", target=target_lang).translate(text)
+        # Normalize language codes
+        lang_codes = {
+            "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
+            "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
+            "Malayalam": "ml", "Punjabi": "pa"
+        }
+        target_code = lang_codes.get(target_lang, "en")
+        translated = GoogleTranslator(source="auto", target=target_code).translate(text)
         return translated if translated else text
     except Exception as e:
-        st.error(f"Translation failed: {str(e)}")
+        st.error(f"Translation failed for text '{text[:50]}...': {str(e)}")
         return text
 
 def detect_language(text: str) -> str:
     """Detect the language of the input text"""
     try:
-        return GoogleTranslator(source="auto", target="en").detect(text)[1]
+        detected = GoogleTranslator(source="auto", target="en").detect(text)
+        # Normalize language code (e.g., 'hi-IN' -> 'hi')
+        lang_code = detected[1].split('-')[0] if isinstance(detected, tuple) else detected.split('-')[0]
+        return lang_code
     except Exception as e:
         st.error(f"Language detection failed: {str(e)}")
         return "en"
@@ -252,7 +281,6 @@ def text_to_speech(text: str, lang: str = "en") -> str:
             "Malayalam": "ml", "Punjabi": "pa"
         }
         gtts_lang = lang_map.get(lang, "en")
-        # Translate text to target language before TTS
         translated_text = translate_text(text, target_lang=gtts_lang)
         tts = gTTS(text=translated_text, lang=gtts_lang, slow=False)
         audio_bytes = io.BytesIO()
@@ -326,7 +354,6 @@ with tab1:
         key="test_creation_num_questions"
     )
     
-    # Add multilingual support and TTS options
     col1, col2 = st.columns(2)
     with col1:
         tts_language = st.selectbox(
@@ -352,7 +379,6 @@ with tab1:
                 else:
                     content = input_data
                 
-                # Debug: Display input content
                 st.write(f"**Debug Input Content**: {content}")
                 
                 prompt = f"""You are TestCraft, an AI agent for generating class-differentiated assessments. Create a test suite based on the provided input and context. Ensure questions are culturally relevant, tailored to student profiles (class level, difficulty), and include a mix of question types (MCQ, short answer, essay). Output **only** the test suite in this exact format, with no additional text, comments, or explanations:
@@ -399,13 +425,11 @@ Instructions:
 
                 test_content = query_langchain(prompt)
                 
-                # Debug: Display raw LLM output
                 st.write("**Debug Raw LLM Output**:")
                 st.code(test_content)
                 
                 questions = extract_questions_and_answers(test_content)
                 
-                # Retry with simplified prompt if parsing fails
                 if questions and "error" in questions[0]:
                     st.warning("Initial parsing failed. Retrying with simplified prompt...")
                     simplified_prompt = f"""You are TestCraft, an AI agent for generating assessments. Create a test suite with {num_questions} questions based on the input and context. Output **only** the test suite in this exact format, with no additional text:
@@ -448,15 +472,29 @@ Instructions:
                     st.error(f"Failed to parse questions: {questions[0]['error']}")
                     st.stop()
                 
-                st.subheader("Generated Test")
-                st.markdown(test_content)
+                # Translate test suite if not English
+                translated_questions = questions
+                translated_test_content = test_content
+                if translate_to != "English":
+                    translated_questions = translate_test_suite(questions, translate_to)
+                    # Reconstruct translated test content
+                    translated_test_content = "**Test Suite**:\n"
+                    for i, q in enumerate(translated_questions, 1):
+                        translated_test_content += f"- Question {i}: {q['question']}\n"
+                        translated_test_content += f"  Type: {q['type']}\n"
+                        translated_test_content += f"  Options: [{'; '.join(q['options'])}]\n" if q['options'] else "  Options: []\n"
+                        translated_test_content += f"  Correct Answer: {q['answer']}\n"
+                        translated_test_content += f"  Difficulty: {q['difficulty']}\n"
                 
-                # Add TTS and translation functionality
+                st.subheader("Generated Test")
+                st.markdown(translated_test_content)
+                
+                # Multilingual Features
                 if questions:
                     st.subheader("Multilingual Features")
                     selected_question = st.selectbox(
                         "Select a question to hear or translate",
-                        [f"Q{i+1}: {q['question'][:50]}..." for i, q in enumerate(questions)],
+                        [f"Q{i+1}: {q['question'][:50]}..." for i, q in enumerate(translated_questions)],
                         key="question_selector"
                     )
                     q_index = int(selected_question.split(":")[0][1:]) - 1
@@ -464,7 +502,7 @@ Instructions:
                     col1, col2 = st.columns(2)
                     with col1:
                         if st.button("🔊 Listen to Question", key="tts_button"):
-                            audio_base64 = text_to_speech(questions[q_index]["question"], lang=tts_language)
+                            audio_base64 = text_to_speech(translated_questions[q_index]["question"], lang=tts_language)
                             if audio_base64:
                                 play_audio(audio_base64)
                     with col2:
@@ -474,16 +512,21 @@ Instructions:
                                 "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
                                 "Malayalam": "ml", "Punjabi": "pa"
                             }
-                            translated = translate_text(questions[q_index]["question"], target_lang=lang_codes.get(translate_to, "en"))
-                            st.markdown(f"**Translated Question**: {translated}")
+                            translated_q = translate_text(translated_questions[q_index]["question"], target_lang=lang_codes.get(translate_to, "en"))
+                            translated_opts = [translate_text(opt, target_lang=lang_codes.get(translate_to, "en")) for opt in translated_questions[q_index]["options"]]
+                            translated_ans = translate_text(translated_questions[q_index]["answer"], target_lang=lang_codes.get(translate_to, "en"))
+                            st.markdown(f"**Translated Question**: {translated_q}")
+                            if translated_opts:
+                                st.markdown(f"**Options**: {'; '.join(translated_opts)}")
+                            st.markdown(f"**Correct Answer**: {translated_ans}")
                 
                 st.session_state.last_results = {
                     "type": "test",
                     "input_type": input_type,
                     "input_data": content,
                     "context": context,
-                    "questions": questions,
-                    "test_content": test_content,
+                    "questions": translated_questions,
+                    "test_content": translated_test_content,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
                 st.session_state.test_history.append(st.session_state.last_results)
@@ -517,6 +560,9 @@ Question: {question}
 Student Response: {student_response or 'No response provided'}"""
                 
                 hint = query_langchain(prompt)
+                # Translate hint to selected language
+                if st.session_state.language != "English":
+                    hint = translate_text(hint, target_lang=st.session_state.language)
                 st.markdown(hint)
                 
                 st.session_state.test_history.append({
@@ -557,7 +603,6 @@ with tab3:
             key="grading_rubric"
         )
         
-        # Add language detection for multilingual responses
         if student_response:
             try:
                 detected_lang = detect_language(student_response)
@@ -565,15 +610,23 @@ with tab3:
                 if detected_lang != "en":
                     translated_response = translate_text(student_response, target_lang="en")
                     st.write(f"Translated to English: {translated_response}")
+                else:
+                    translated_response = student_response
             except:
-                pass
+                st.warning("Language detection failed. Assuming English.")
+                translated_response = student_response
         
         if st.button(
             "Grade Response",
             disabled=not (student_response and correct_answer and rubric),
             key="grading_generate_text"
         ):
-            responses.append({"response": student_response, "correct_answer": correct_answer, "rubric": rubric})
+            responses.append({
+                "response": translated_response,
+                "original_response": student_response,
+                "correct_answer": correct_answer,
+                "rubric": rubric
+            })
     else:
         img_file = st.file_uploader(
             "Upload Handwritten Response",
@@ -599,12 +652,28 @@ with tab3:
             if "Error" in description:
                 st.error(description)
                 st.stop()
-            responses.append({"response": description, "correct_answer": correct_answer, "rubric": rubric})
+            try:
+                detected_lang = detect_language(description)
+                st.write(f"Detected language: {detected_lang}")
+                if detected_lang != "en":
+                    translated_response = translate_text(description, target_lang="en")
+                    st.write(f"Translated to English: {translated_response}")
+                else:
+                    translated_response = description
+            except:
+                st.warning("Language detection failed. Assuming English.")
+                translated_response = description
+            responses.append({
+                "response": translated_response,
+                "original_response": description,
+                "correct_answer": correct_answer,
+                "rubric": rubric
+            })
     
     if responses:
         with st.spinner("Grading..."):
             try:
-                prompt = f"""You are GradeWise, an AI agent for grading student responses. Grade the provided response based on the correct answer and rubric. Use sentiment analysis for essay responses and provide feedback in {st.session_state.language}. Return **only** the grade and feedback in this format:
+                prompt = f"""You are GradeWise, an AI agent for grading student responses. Grade the provided response based on the correct answer and rubric. Use sentiment analysis for essay responses and provide feedback in English. Return **only** the grade and feedback in this format:
 
 **Grade**: [Score/Total]
 **Feedback**: [Detailed feedback including what was correct, incorrect, and suggestions]
@@ -614,25 +683,19 @@ Correct Answer: {responses[0]['correct_answer']}
 Rubric: {responses[0]['rubric']}"""
                 
                 grading_result = query_langchain(prompt)
-                st.markdown(grading_result)
-                
-                # Translate feedback to selected language
-                lang_codes = {
-                    "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
-                    "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
-                    "Malayalam": "ml", "Punjabi": "pa"
-                }
                 if st.session_state.language != "English":
                     feedback_match = re.search(r'\*\*Feedback\*\*: (.*)', grading_result, re.DOTALL)
                     if feedback_match:
                         feedback = feedback_match.group(1)
-                        translated_feedback = translate_text(feedback, target_lang=lang_codes.get(st.session_state.language, "en"))
+                        translated_feedback = translate_text(feedback, target_lang=st.session_state.language)
                         grading_result = grading_result.replace(feedback, translated_feedback)
-                        st.markdown(grading_result)
+                
+                st.markdown(grading_result)
                 
                 st.session_state.test_history.append({
                     "type": "grade",
                     "response": responses[0]["response"],
+                    "original_response": responses[0]["original_response"],
                     "correct_answer": responses[0]["correct_answer"],
                     "rubric": responses[0]["rubric"],
                     "grading_result": grading_result,
@@ -672,19 +735,11 @@ Student ID: {student_id}
 Topic: {topic}"""
                 
                 insights = query_langchain(prompt)
-                st.markdown(insights)
-                
-                # Translate insights to selected language
-                lang_codes = {
-                    "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
-                    "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
-                    "Malayalam": "ml", "Punjabi": "pa"
-                }
+                translated_insights = insights
                 if st.session_state.language != "English":
-                    insights_translated = translate_text(insights, target_lang=lang_codes.get(st.session_state.language, "en"))
-                    st.markdown(insights_translated)
+                    translated_insights = translate_text(insights, target_lang=st.session_state.language)
+                st.markdown(translated_insights)
                 
-                # Simulate student data for visualization
                 student_data = {
                     "accuracy": 85,
                     "time_taken": 30,
@@ -698,7 +753,7 @@ Topic: {topic}"""
                     "type": "insights",
                     "student_id": student_id,
                     "topic": topic,
-                    "insights": insights,
+                    "insights": translated_insights,
                     "chart_path": chart_path,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 })
@@ -706,7 +761,6 @@ Topic: {topic}"""
                 st.error(f"Analytics generation failed: {str(e)}")
                 st.error(f"Traceback: {traceback.format_exc()}")
     
-    # Export report
     if st.session_state.last_results.get("type") == "test":
         if st.button("📄 Generate Test Report", key="analytics_generate_report"):
             try:
@@ -757,6 +811,7 @@ with st.sidebar:
                 st.markdown(f"**Question**: {entry['question']}\n**Hint**: {entry['hint']}")
             elif entry['type'] == "grade":
                 st.markdown(entry["grading_result"])
+                st.write(f"Original Response: {entry['original_response']}")
             elif entry['type'] == "insights":
                 st.markdown(entry["insights"])
                 if entry.get("chart_path") and os.path.exists(entry["chart_path"]):
