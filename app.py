@@ -318,11 +318,7 @@ with tab1:
     context = st.text_area("Context", placeholder="E.g. Class 5, use mango examples", key="test_creation_context")
     num_questions = st.number_input("Number of Questions", min_value=1, max_value=20, value=5, key="test_creation_num_questions")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        tts_language = st.selectbox("Text-to-Speech Language", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="tts_language")
-    with col2:
-        translate_to = st.selectbox("Translate Questions To", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="translate_to")
+    translate_to = st.selectbox("Translate Questions To", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="translate_to")
     
     if st.button("Generate Test", disabled=not input_data, key="test_creation_generate"):
         with st.spinner("Generating test..."):
@@ -390,29 +386,6 @@ Instructions:
                 st.subheader(f"Translated Test ({translate_to})")
                 st.markdown(translated_test_content)
                 
-                if questions:
-                    st.subheader("Multilingual Features")
-                    selected_question = st.selectbox("Select a question", [f"Q{i+1}: {q['question'][:50]}..." for i, q in enumerate(translated_questions)], key="question_selector")
-                    q_index = int(selected_question.split(":")[0][1:]) - 1
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("🔊 Listen to Question", key="tts_button"):
-                            audio_base64 = text_to_speech(translated_questions[q_index]["question"], lang=tts_language)
-                            if audio_base64:
-                                play_audio(audio_base64)
-                    with col2:
-                        if st.button(f"Translate to {translate_to}", key="translate_button"):
-                            lang_codes = {"English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn", "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn", "Malayalam": "ml", "Punjabi": "pa"}
-                            target_lang = lang_codes.get(translate_to, "en")
-                            translated_q = translate_text(translated_questions[q_index]["question"], target_lang=target_lang)
-                            translated_opts = [translate_text(opt, target_lang=target_lang) for opt in translated_questions[q_index]["options"]]
-                            translated_ans = translate_text(translated_questions[q_index]["answer"], target_lang=target_lang)
-                            st.markdown(f"**Translated Question**: {translated_q}")
-                            if translated_opts:
-                                st.markdown(f"**Options**: {'; '.join(translated_opts)}")
-                            st.markdown(f"**Correct Answer**: {translated_ans}")
-                
                 st.session_state.last_results = {
                     "type": "test",
                     "input_type": input_type,
@@ -422,6 +395,7 @@ Instructions:
                     "original_questions": original_questions,
                     "test_content": translated_test_content,
                     "original_test_content": original_test_content,
+                    "translate_to": translate_to,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
                 st.session_state.test_history.append(st.session_state.last_results)
@@ -610,4 +584,3 @@ with st.sidebar:
         st.session_state.test_history.clear()
         st.session_state.last_results = {}
         st.rerun()
-
