@@ -75,6 +75,7 @@ if "language" not in st.session_state:
     st.session_state.language = "English"
 
 # ------------------------ Helper Functions ------------------------ #
+
 def query_langchain(prompt: str, retry: bool = False) -> str:
     if not models['llm']:
         return "Error: LLM service unavailable"
@@ -118,7 +119,6 @@ def process_url(url: str) -> str:
             content = page.content()
             text = page.evaluate(
                 """() => {
-                    // Remove scripts, styles, and other non-content elements
                     document.querySelectorAll('script, style, nav, header, footer').forEach(el => el.remove());
                     return document.body.innerText.trim();
                 }"""
@@ -131,52 +131,26 @@ def process_url(url: str) -> str:
 
 def extract_questions_and_answers(text: str) -> List[Dict[str, Any]]:
     questions = []
-    pattern = r'Question \d+: (.*?)\n(?:Type: (.*?)\n)?Options: (.*?)\nCorrect Answer: (.*?)\nDifficulty: (.*?)(?:\n|$)'
-    matches = re.findall(pattern, text, re.DOTALL | re.MULTILINE | re.UNICODE)
-    for match in matches:
-        question, q_type, options, answer, difficulty = match
+    question_blocks = re.split(r'Question \d+:', text)[1:]
+    for block in question_blocks:
+        question_text_match = re.search(r'^(.*?)(?:\n|$)', block)
+        question_text = question_text_match.group(1).strip() if question_text_match else "Not found"
+        type_match = re.search(r'Type:\s*(.*)', block)
+        q_type = type_match.group(1).strip() if type_match else "MCQ"
+        options_match = re.search(r'Options:\s*(.*)', block)
+        options = [opt.strip() for opt in options_match.group(1).split(";")] if options_match else []
+        answer_match = re.search(r'Correct Answer:\s*(.*)', block)
+        answer = answer_match.group(1).strip() if answer_match else "Not provided"
+        difficulty_match = re.search(r'Difficulty:\s*(.*)', block)
+        difficulty = difficulty_match.group(1).strip() if difficulty_match else "Medium"
         questions.append({
-            "question": question.strip(),
-            "type": q_type.strip() if q_type else "MCQ",
-            "options": [opt.strip() for opt in options.split(";") if opt.strip()] if options.strip() else [],
-            "answer": answer.strip(),
-            "difficulty": difficulty.strip() if difficulty else "Medium"
+            "question": question_text,
+            "type": q_type,
+            "options": options,
+            "answer": answer,
+            "difficulty": difficulty
         })
-    if not matches:
-        fallback_pattern = r'Question \d+: (.*?)(?:\n|$)(?:Type: (.*?)(?:\n|$))?(?:Options: (.*?)(?:\n|$))?(?:Correct Answer: (.*?)(?:\n|$))?(?:Difficulty: (.*?)(?:\n|$))?'
-        fallback_matches = re.findall(fallback_pattern, text, re.DOTALL | re.MULTILINE | re.UNICODE)
-        for match in fallback_matches:
-            question, q_type, options, answer, difficulty = match
-            if question.strip():
-                questions.append({
-                    "question": question.strip(),
-                    "type": q_type.strip() if q_type else "MCQ",
-                    "options": [opt.strip() for opt in options.split(";") if opt.strip()] if options.strip() else [],
-                    "answer": answer.strip() if answer else "Not provided",
-                    "difficulty": difficulty.strip() if difficulty else "Medium"
-                })
-    if not questions:
-        question_blocks = text.split("- Question")
-        for block in question_blocks[1:]:
-            block = block.strip()
-            if not block:
-                continue
-            q_match = re.match(r'^\d+: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
-            if not q_match:
-                continue
-            question = q_match.group(1).strip()
-            type_match = re.search(r'Type: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
-            options_match = re.search(r'Options: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
-            answer_match = re.search(r'Correct Answer: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
-            difficulty_match = re.search(r'Difficulty: (.*?)(?=\n|$)', block, re.DOTALL | re.UNICODE)
-            questions.append({
-                "question": question,
-                "type": type_match.group(1).strip() if type_match else "MCQ",
-                "options": [opt.strip() for opt in options_match.group(1).split(";") if opt.strip()] if options_match and options_match.group(1).strip() else [],
-                "answer": answer_match.group(1).strip() if answer_match else "Not provided",
-                "difficulty": difficulty_match.group(1).strip() if difficulty_match else "Medium"
-            })
-    return questions if questions else [{"error": "No questions parsed from output"}]
+    return questions
 
 def translate_text(text: str, target_lang: str = "en") -> str:
     lang_codes = {
@@ -192,23 +166,14 @@ def translate_text(text: str, target_lang: str = "en") -> str:
             translated = translator.translate(text)
             if translated:
                 return translated
-            st.warning(f"Translation returned None for text '{text[:50]}...' on attempt {attempt + 1}")
             if attempt < max_retries - 1:
                 time.sleep(1)
         except Exception as e:
-            st.error(f"Translation failed for text '{text[:50]}...' on attempt {attempt + 1}: {str(e)}")
             if attempt < max_retries - 1:
                 time.sleep(1)
-    st.error(f"Translation failed after {max_retries} attempts. Using original text.")
     return text
 
 def translate_test_suite(questions: List[Dict[str, Any]], target_lang: str) -> List[Dict[str, Any]]:
-    lang_codes = {
-        "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
-        "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
-        "Malayalam": "ml", "Punjabi": "pa"
-    }
-    target_code = lang_codes.get(target_lang, "en")
     translated_questions = []
     for q in questions:
         if "error" in q:
@@ -223,8 +188,7 @@ def translate_test_suite(questions: List[Dict[str, Any]], target_lang: str) -> L
                 "difficulty": q["difficulty"]
             }
             translated_questions.append(translated_q)
-        except Exception as e:
-            st.warning(f"Translation failed for question '{q['question'][:50]}...': {str(e)}")
+        except Exception:
             translated_questions.append(q)
     return translated_questions
 
@@ -246,17 +210,16 @@ def detect_language(text: str) -> str:
         detected = GoogleTranslator(source="auto", target="en").detect(text)
         lang_code = detected[1].split('-')[0] if isinstance(detected, tuple) else detected.split('-')[0]
         return lang_code
-    except Exception as e:
-        st.error(f"Language detection failed: {str(e)}")
+    except Exception:
         return "en"
 
 def text_to_speech(text: str, lang: str = "en") -> str:
+    lang_map = {
+        "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
+        "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
+        "Malayalam": "ml", "Punjabi": "pa"
+    }
     try:
-        lang_map = {
-            "English": "en", "Hindi": "hi", "Tamil": "ta", "Bengali": "bn",
-            "Telugu": "te", "Marathi": "mr", "Gujarati": "gu", "Kannada": "kn",
-            "Malayalam": "ml", "Punjabi": "pa"
-        }
         gtts_lang = lang_map.get(lang, "en")
         translated_text = translate_text(text, target_lang=lang)
         tts = gTTS(text=translated_text, lang=gtts_lang, slow=False)
@@ -346,12 +309,12 @@ with tab1:
         input_data = st.text_area("Describe topic", placeholder="E.g. Fractions for Class 5", key="test_creation_text")
     else:  # URL
         input_data = st.text_input("Enter URL", placeholder="E.g. https://example.com/science-lesson", key="test_creation_url")
-    
+
     context = st.text_area("Context", placeholder="E.g. Class 5, use mango examples", key="test_creation_context")
     num_questions = st.number_input("Number of Questions", min_value=1, max_value=20, value=5, key="test_creation_num_questions")
-    
+
     translate_to = st.selectbox("Translate Questions To", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="translate_to")
-    
+
     if st.button("Generate Test", disabled=not input_data, key="test_creation_generate"):
         with st.spinner("Generating test..."):
             try:
@@ -361,35 +324,37 @@ with tab1:
                     content = process_url(input_data)
                 else:
                     content = input_data
+
                 if "Error" in content:
                     st.error(content)
                     st.stop()
-                
+
                 prompt = get_test_creation_prompt(content, context, st.session_state.class_level, num_questions)
                 test_content = query_langchain(prompt)
+
                 questions = extract_questions_and_answers(test_content)
-                
+
                 if questions and "error" in questions[0]:
                     st.warning("Parsing failed. Retrying...")
                     simplified_prompt = get_test_creation_retry_prompt(content, context, st.session_state.class_level, num_questions)
                     test_content = query_langchain(simplified_prompt, retry=True)
                     questions = extract_questions_and_answers(test_content)
-                
+
                 if questions and "error" in questions[0]:
                     st.error(f"Failed to parse questions: {questions[0]['error']}")
                     st.stop()
-                
+
                 original_questions = questions
                 original_test_content = format_test_suite(original_questions)
-                
+
                 translated_questions = translate_test_suite(questions, translate_to)
                 translated_test_content = format_test_suite(translated_questions)
-                
+
                 st.subheader("Original Test (English)")
                 st.markdown(original_test_content)
                 st.subheader(f"Translated Test ({translate_to})")
                 st.markdown(translated_test_content)
-                
+
                 st.session_state.last_results = {
                     "type": "test",
                     "input_type": input_type,
@@ -403,7 +368,7 @@ with tab1:
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
                 st.session_state.test_history.append(st.session_state.last_results)
-                
+
             except Exception as e:
                 st.error(f"Test generation failed: {str(e)}")
 
@@ -411,7 +376,7 @@ with tab2:
     st.subheader("Generate Hints")
     question = st.text_area("Enter Question", placeholder="E.g. What is the capital of India?", key="hint_generator_question")
     student_response = st.text_area("Student Response (Optional)", placeholder="E.g. Mumbai", key="hint_generator_response")
-    
+
     if st.button("Generate Hint", disabled=not question, key="hint_generator_generate"):
         with st.spinner("Generating hint..."):
             try:
@@ -434,18 +399,18 @@ with tab3:
     st.subheader("Grade Responses")
     response_type = st.radio("Response Type", ["Text", "Handwritten Image"], key="grading_response_type")
     responses = []
-    
+
     if response_type == "Text":
         student_response = st.text_area("Enter Student Response", placeholder="E.g. The capital of India is Delhi", key="grading_text_response")
         correct_answer = st.text_input("Correct Answer", placeholder="E.g. Delhi", key="grading_correct_answer")
         rubric = st.text_area("Grading Rubric", placeholder="E.g. 2 points for correct answer", key="grading_rubric")
-        
+
         if student_response:
             detected_lang = detect_language(student_response)
             st.write(f"Detected language: {detected_lang}")
             translated_response = translate_text(student_response, target_lang="en") if detected_lang != "en" else student_response
             st.write(f"Translated to English: {translated_response}")
-        
+
         if st.button("Grade Response", disabled=not (student_response and correct_answer and rubric), key="grading_generate_text"):
             responses.append({"response": translated_response, "original_response": student_response, "correct_answer": correct_answer, "rubric": rubric})
     else:
@@ -464,7 +429,7 @@ with tab3:
             translated_response = translate_text(description, target_lang="en") if detected_lang != "en" else description
             st.write(f"Translated to English: {translated_response}")
             responses.append({"response": translated_response, "original_response": description, "correct_answer": correct_answer, "rubric": rubric})
-    
+
     if responses:
         with st.spinner("Grading..."):
             try:
@@ -493,7 +458,7 @@ with tab4:
     st.subheader("Learning Analytics")
     student_id = st.text_input("Student ID", placeholder="E.g. STU001", key="analytics_student_id")
     topic = st.text_input("Topic", placeholder="E.g. Fractions", key="analytics_topic")
-    
+
     if st.button("Generate Insights", disabled=not (student_id and topic), key="analytics_generate"):
         with st.spinner("Generating insights..."):
             try:
@@ -515,7 +480,7 @@ with tab4:
                 })
             except Exception as e:
                 st.error(f"Analytics failed: {str(e)}")
-    
+
     if st.session_state.last_results.get("type") == "test":
         if st.button("📄 Generate Test Report", key="analytics_generate_report"):
             try:
@@ -540,7 +505,7 @@ with st.sidebar:
     language = st.selectbox("Feedback Language", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="dashboard_language")
     st.session_state.class_level = class_level
     st.session_state.language = language
-    
+
     st.subheader("Test History")
     for entry in reversed(st.session_state.test_history):
         with st.expander(f"{entry['timestamp']} - {entry['type'].title()}"):
@@ -558,12 +523,11 @@ with st.sidebar:
                 st.markdown(entry["insights"])
                 if entry.get("chart_path") and os.path.exists(entry["chart_path"]):
                     st.image(entry["chart_path"])
-    
+
     if st.button("Clear History", key="dashboard_clear_history"):
         for entry in st.session_state.test_history:
             if entry.get("chart_path") and os.path.exists(entry["chart_path"]):
                 os.remove(entry["chart_path"])
         st.session_state.test_history.clear()
         st.session_state.last_results = {}
-        st.rerun()
-
+        st.experimental_rerun()
