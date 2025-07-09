@@ -478,15 +478,16 @@ st.markdown(
 )
 
 # Status bar
+# Time display only
+# Time display with Sahayak AI branding
 st.markdown(f"""
     <div style="background-color: #e3f2fd; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong>📅 Current Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M')} IST
+            <div style="font-weight: bold; color: #2196F3; font-size: 1.1rem;">
+                Sahayak AI
             </div>
             <div>
-                <strong>🏫 Class Level:</strong> {st.session_state.class_level} | 
-                <strong>🌐 Language:</strong> {st.session_state.language}
+                <strong>📅 {datetime.now().strftime('%Y-%m-%d %H:%M')} IST</strong>
             </div>
         </div>
     </div>
