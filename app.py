@@ -501,7 +501,7 @@ with tab4:
 with st.sidebar:
     st.header("Teacher Dashboard")
     st.subheader("Class Settings")
-    class_level = st.selectbox("Class Level", [f"Class {i}" for i in range(1, 13)], key="dashboard_class_level")
+    class_level = st.selectbox("Class Level", ["Class A", "Class B"], key="dashboard_class_level")
     language = st.selectbox("Feedback Language", ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"], key="dashboard_language")
     st.session_state.class_level = class_level
     st.session_state.language = language
