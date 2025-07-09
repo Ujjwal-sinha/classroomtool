@@ -1074,6 +1074,6 @@ with st.sidebar:
     st.markdown("""
         <div style="text-align: center; color: #666; font-size: 0.9rem;">
             <p>📱 Sahayak Education Platform v1.0</p>
-            <p>© 2023 AI for Education Initiative</p>
+            <p>© 2025 AI for Education Initiative</p>
         </div>
     """, unsafe_allow_html=True)
