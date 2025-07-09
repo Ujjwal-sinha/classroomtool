@@ -318,19 +318,34 @@ def generate_lq_chart(student_data: Dict[str, float]) -> str:
     return chart_path
 
 def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_path: str) -> str:
-    """Generate PDF report from test data"""
+    """Generate PDF report from test data with full Unicode support"""
     try:
         pdf = FPDF()
         pdf.add_page()
         
+        # Add a Unicode-compatible font (you'll need to download the font file)
+        try:
+            # Download Noto Sans font (supports most languages)
+            font_path = "NotoSans-Regular.ttf"
+            if not os.path.exists(font_path):
+                url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
+                r = requests.get(url, allow_redirects=True)
+                open(font_path, 'wb').write(r.content)
+            
+            pdf.add_font('NotoSans', '', font_path, uni=True)
+            pdf.set_font('NotoSans', '', 12)
+        except Exception as e:
+            st.warning(f"Couldn't load Unicode font: {e}. Using default font with limited character support.")
+            pdf.set_font("Arial", size=12)
+        
         # Header
-        pdf.set_font("Arial", "B", 16)
+        pdf.set_font('NotoSans', 'B', 16)
         pdf.cell(0, 10, "Sahayak Assessment Report", ln=1, align="C")
         
         # Questions section
-        pdf.set_font("Arial", "B", 12)
+        pdf.set_font('NotoSans', 'B', 12)
         pdf.cell(0, 10, "Generated Questions", ln=1)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font('NotoSans', '', 10)
         
         for q in questions:
             if "error" in q:
@@ -339,15 +354,21 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
             
             pdf.multi_cell(0, 8, f"Question: {q['question']}")
             pdf.cell(0, 8, f"Type: {q['type']}", ln=1)
-            pdf.cell(0, 8, f"Options: {'; '.join(q['options'])}" if q['options'] else "None", ln=1)
+            
+            if q['options']:
+                options_text = "; ".join(opt for opt in q['options'])
+                pdf.multi_cell(0, 8, f"Options: {options_text}")
+            else:
+                pdf.cell(0, 8, "Options: None", ln=1)
+            
             pdf.cell(0, 8, f"Correct Answer: {q['answer']}", ln=1)
             pdf.cell(0, 8, f"Difficulty: {q['difficulty']}", ln=1)
             pdf.ln(5)
         
         # Analysis section
-        pdf.set_font("Arial", "B", 12)
+        pdf.set_font('NotoSans', 'B', 12)
         pdf.cell(0, 10, "Analysis", ln=1)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font('NotoSans', '', 10)
         pdf.multi_cell(0, 8, analysis or "No analysis provided")
         pdf.ln(10)
         
@@ -357,7 +378,7 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
         
         # Footer
         pdf.set_y(-15)
-        pdf.set_font("Arial", "I", 8)
+        pdf.set_font('NotoSans', 'I', 8)
         pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} IST", 0, 0, "C")
         
         pdf_path = "sahayak_report.pdf"
