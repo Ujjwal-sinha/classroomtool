@@ -25,6 +25,7 @@ from playwright.sync_api import sync_playwright
 
 # Import prompt templates
 from prompts import (
+    get_lesson_plan_prompt,
     get_test_creation_prompt,
     get_test_creation_retry_prompt,
     get_hint_generator_prompt,
@@ -492,12 +493,111 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Main tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+# Add with other tab definitions
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📝 Test Creation", 
     "💡 Hint Generator", 
-    "✅ Grading Assistant", 
-    "📊 Learning Analytics"
+    "✅ Grading", 
+    "📊 Analytics",
+    "📚 Class Prep"
 ])
+
+# Add this new tab section
+with tab5:
+    with st.container():
+        st.markdown("""
+            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; color: #2196F3;">Lesson Planner & Material Generator</h3>
+                <p style="margin: 0.5rem 0 0; color: #555;">Create complete lesson plans with teaching materials</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            class_level = st.selectbox(
+                "Class/Grade Level",
+                ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", 
+                 "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"],
+                key="planner_class_level"
+            )
+            
+            subject = st.selectbox(
+                "Subject",
+                ["Mathematics", "Science", "English", "Hindi", "Social Studies",
+                 "Regional Language", "Computer Science", "General Knowledge"],
+                key="planner_subject"
+            )
+            
+            topic = st.text_input(
+                "Topic/Chapter",
+                placeholder="E.g. Photosynthesis, Fractions, Ancient Civilizations",
+                key="planner_topic"
+            )
+            
+            duration = st.selectbox(
+                "Lesson Duration",
+                ["30 minutes", "45 minutes", "1 hour", "1.5 hours", "2 hours"],
+                key="planner_duration"
+            )
+        
+        with col2:
+            teaching_style = st.selectbox(
+                "Preferred Teaching Style",
+                ["Interactive", "Lecture-based", "Activity-based", "Discussion-based", 
+                 "Project-based", "Blended"],
+                key="planner_style"
+            )
+            
+            resources_available = st.multiselect(
+                "Available Resources",
+                ["Whiteboard", "Projector", "Smartphone", "Printed Materials", 
+                 "Science Kit", "Art Supplies", "Computer Lab", "None"],
+                key="planner_resources"
+            )
+            
+            language = st.selectbox(
+                "Instruction Language",
+                ["English", "Hindi", "Tamil", "Bengali", "Telugu", 
+                 "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
+                key="planner_language"
+            )
+        
+        if st.button("Generate Lesson Plan", key="generate_lesson_plan"):
+            if not topic:
+                st.warning("Please enter a topic/chapter")
+            else:
+                with st.spinner("Creating comprehensive lesson plan..."):
+                    try:
+                        prompt = get_lesson_plan_prompt(
+                            class_level=class_level,
+                            subject=subject,
+                            topic=topic,
+                            duration=duration,
+                            teaching_style=teaching_style,
+                            resources=resources_available,
+                            language=language
+                        )
+                        
+                        lesson_plan = query_langchain(prompt)
+                        
+                        st.success("Lesson Plan Generated Successfully!")
+                        
+                        with st.expander("📝 Complete Lesson Plan", expanded=True):
+                            st.markdown(lesson_plan)
+                        
+                        # Add to session history
+                        st.session_state.test_history.append({
+                            "type": "lesson_plan",
+                            "class_level": class_level,
+                            "subject": subject,
+                            "topic": topic,
+                            "plan": lesson_plan,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        })
+                        
+                    except Exception as e:
+                        st.error(f"Failed to generate lesson plan: {str(e)}")
 
 # ------------------------ Test Creation Tab ------------------------ #
 with tab1:

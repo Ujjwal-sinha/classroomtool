@@ -105,6 +105,63 @@ Response: {response}
 Correct Answer: {correct_answer}
 Rubric: {rubric}"""
 
+def get_lesson_plan_prompt(class_level: str, subject: str, topic: str, duration: str, 
+                         teaching_style: str, resources: list[str], language: str = "English") -> str:
+    """
+    Generate the prompt for creating a comprehensive lesson plan with teaching materials.
+    
+    Args:
+        class_level (str): Class/Grade level (e.g., "Class 5")
+        subject (str): Subject (e.g., "Mathematics")
+        topic (str): Topic/Chapter (e.g., "Fractions")
+        duration (str): Lesson duration (e.g., "1 hour")
+        teaching_style (str): Preferred teaching style
+        resources (List[str]): Available resources
+        language (str): Language for materials
+    
+    Returns:
+        str: Formatted prompt for lesson plan generation
+    """
+    return f"""You are LessonCraft, an AI agent for generating comprehensive lesson plans. Create a detailed lesson plan with teaching materials based on the provided parameters. Output **only** the lesson plan in this format:
+
+**Lesson Plan for {class_level} {subject} - {topic}**
+- Duration: {duration}
+- Teaching Style: {teaching_style}
+- Resources Available: {', '.join(resources) if resources else 'None specified'}
+- Language: {language}
+
+**Learning Objectives**:
+1. [Objective 1]
+2. [Objective 2]
+3. [Objective 3]
+
+**Lesson Structure**:
+1. Warm-up Activity (5-10 mins): [Description]
+2. Direct Instruction (15-20 mins): [Description]
+3. Guided Practice (15-20 mins): [Description]
+4. Independent Practice (10-15 mins): [Description]
+5. Assessment/Closure (5-10 mins): [Description]
+
+**Teaching Materials**:
+- [Material 1 with description]
+- [Material 2 with description]
+- [Material 3 with description]
+
+**Differentiation Strategies**:
+- For struggling students: [Strategy]
+- For advanced students: [Strategy]
+
+**Homework/Extension Activities**:
+1. [Activity 1]
+2. [Activity 2]
+
+**Notes**:
+- Use culturally relevant examples (e.g., local festivals, foods)
+- Include hands-on activities where possible
+- Align with {class_level} curriculum standards
+- Provide clear instructions for each activity
+- Suggest low-cost alternatives for resource constraints"""
+
 def get_analytics_prompt(student_id: str, topic: str) -> str:
     """
     Generate the prompt for creating learning analytics based on student ID and topic.
