@@ -95,7 +95,7 @@ if "class_level" not in st.session_state:
 if "language" not in st.session_state:
     st.session_state.language = "English"
 if "theme" not in st.session_state:
-    st.session_state.theme = "Light"
+    st.session_state.theme = "Dark"  # Set default theme to Dark
 
 # ------------------------ Helper Functions ------------------------ #
 def query_langchain(prompt: str, retry: bool = False) -> str:
@@ -929,7 +929,7 @@ with st.sidebar:
         "Select Theme",
         ["Light", "Dark"],
         key="theme_selector",
-        index=0 if st.session_state.theme == "Light" else 1
+        index=1 if st.session_state.theme == "Dark" else 0  # Default to Dark (index 1)
     )
     
     if theme != st.session_state.theme:
