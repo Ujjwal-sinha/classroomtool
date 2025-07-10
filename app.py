@@ -386,24 +386,47 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
 # ------------------------ Custom CSS ------------------------ #
 st.markdown("""
     <style>
-        .main {
-            background-color: #f5f9ff;
+        /* Main app background */
+        .main, .stApp {
+            background-color: #1e1e2e;
+            color: #e0e0e0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        .stApp {
-            background-image: linear-gradient(to bottom, #ffffff, #f0f7ff);
-        }
+
+        /* Sidebar styling */
         .sidebar .sidebar-content {
-            background-color: #e3f2fd;
+            background-color: #252537;
+            color: #e0e0e0;
         }
-        .st-bb {
-            background-color: transparent;
+
+        /* Headings */
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff;
+            font-weight: 600;
         }
-        .st-at {
-            background-color: #e3f2fd;
+
+        /* Text and labels */
+        .stMarkdown, .stText, .stLabel, p, div {
+            color: #d1d1d6;
         }
+
+        /* Input fields */
+        .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+            background-color: #2a2a3b;
+            color: #e0e0e0;
+            border: 1px solid #3c3c4e;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
+            border-color: #4e89ff;
+            box-shadow: 0 0 5px rgba(78, 137, 255, 0.5);
+        }
+
+        /* Buttons */
         .stButton>button {
-            background-color: #4CAF50;
-            color: white;
+            background-color: #4e89ff;
+            color: #ffffff;
             border-radius: 5px;
             padding: 0.5rem 1rem;
             border: none;
@@ -411,53 +434,151 @@ st.markdown("""
             transition: all 0.3s;
         }
         .stButton>button:hover {
-            background-color: #3e8e41;
+            background-color: #3a6df0;
             transform: scale(1.02);
         }
-        .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-            border-radius: 8px;
-            padding: 10px;
+        .stButton>button:disabled {
+            background-color: #3c3c4e;
+            color: #6e6e80;
         }
+
+        /* Radio buttons */
         .stRadio>div {
             flex-direction: row;
             gap: 1rem;
         }
-        .stRadio>div>label {
-            margin-bottom: 0;
+        .stRadio label {
+            color: #d1d1d6;
         }
+        .stRadio [data-baseweb="radio"] {
+            background-color: #2a2a3b;
+            border: 2px solid #3c3c4e;
+        }
+        .stRadio [data-baseweb="radio"]:checked {
+            background-color: #4e89ff;
+            border-color: #4e89ff;
+        }
+
+        /* Selectbox */
+        .stSelectbox>div>div {
+            background-color: #2a2a3b;
+            color: #e0e0e0;
+            border: 1px solid #3c3c4e;
+            border-radius: 8px;
+        }
+
+        /* Tabs */
         .stTabs [data-baseweb="tab-list"] {
+            background-color: #252537;
             gap: 0;
         }
         .stTabs [data-baseweb="tab"] {
             height: 50px;
             padding: 0 2rem;
-            background-color: #e3f2fd;
+            background-color: #252537;
+            color: #d1d1d6;
             border-radius: 0;
             margin-right: 0 !important;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #2196F3;
-            color: white;
+            background-color: #4e89ff;
+            color: #ffffff;
         }
+
+        /* Containers */
         .block-container {
             padding-top: 2rem;
         }
+        .st-bb, .st-at {
+            background-color: #252537;
+        }
+
+        /* Progress bar */
         .stProgress>div>div>div>div {
-            background-color: #2196F3;
+            background-color: #4e89ff;
         }
+
+        /* Alerts */
         .stAlert {
+            background-color: #2a2a3b;
+            color: #e0e0e0;
+            border: 1px solid #3c3c4e;
             border-radius: 8px;
         }
+        .stAlert.stSuccess {
+            border-left: 4px solid #4caf50;
+        }
+        .stAlert.stError {
+            border-left: 4px solid #f44336;
+        }
+        .stAlert.stWarning {
+            border-left: 4px solid #ff9800;
+        }
+
+        /* Expander */
         .stExpander {
-            background-color: white;
+            background-color: #252537;
+            color: #e0e0e0;
+            border: 1px solid #3c3c4e;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        .reportview-container .markdown-text-container {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        .stExpander summary {
+            background-color: #2a2a3b;
+            color: #e0e0e0;
         }
-        .css-1aumxhk {
-            background-color: #e3f2fd;
+
+        /* Custom containers (e.g., header, status bar) */
+        [style*="background-color: #e3f2fd"] {
+            background-color: #252537 !important;
+            color: #e0e0e0 !important;
+        }
+        [style*="color: #2196F3"] {
+            color: #4e89ff !important;
+        }
+        [style*="color: #555"] {
+            color: #d1d1d6 !important;
+        }
+
+        /* Grading and Hint boxes */
+        [style*="background-color: #e8f5e9"] {
+            background-color: #2a3b2a !important;
+            border-left: 4px solid #4caf50 !important;
+        }
+        [style*="color: #2e7d32"] {
+            color: #4caf50 !important;
+        }
+        [style*="background-color: #fff8e1"] {
+            background-color: #3b2f2a !important;
+            border-left: 4px solid #ff9800 !important;
+        }
+        [style*="color: #ff8f00"] {
+            color: #ff9800 !important;
+        }
+        [style*="background-color: #f3e5f5"] {
+            background-color: #3b2a3b !important;
+            border-left: 4px solid #9c27b0 !important;
+        }
+        [style*="color: #7b1fa2"] {
+            color: #9c27b0 !important;
+        }
+
+        /* Sidebar header */
+        [style*="background-color: #2196F3"] {
+            background-color: #4e89ff !important;
+        }
+
+        /* Footer */
+        [style*="color: #666"] {
+            color: #a0a0a8 !important;
+        }
+
+        /* Links and images */
+        a {
+            color: #4e89ff;
+        }
+        img[src*="icons8.com"] {
+            filter: brightness(0) invert(1);
         }
     </style>
 """, unsafe_allow_html=True)
