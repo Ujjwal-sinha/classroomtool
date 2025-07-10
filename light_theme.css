@@ -1,21 +1,44 @@
 /* Light Theme */
 @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap');
 
+/* Main app background */
 .main {
     background-color: #f5f9ff;
 }
 .stApp {
     background-image: linear-gradient(to bottom, #ffffff, #f0f7ff);
 }
+
+/* Sidebar styling */
 .sidebar .sidebar-content {
-    background-color: #e3f2fd;
+    background-color: #f0f7ff; /* Lighter background for light theme */
+    color: #333; /* Darker font color for visibility */
 }
-.st-bb {
-    background-color: transparent;
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: #2196F3;
 }
-.st-at {
-    background-color: #e3f2fd;
+
+/* General text and labels */
+.stMarkdown, .stText, .stLabel, p, div {
+    color: #555;
 }
+
+/* Input fields */
+.stTextInput>div>div>input, .stTextArea>div>div>textarea {
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #ffffff;
+    color: #333;
+    border: 1px solid #ccc;
+}
+.stTextInput>div>div>input::placeholder, .stTextArea>div>div>textarea::placeholder {
+    color: #888; /* Lighter placeholder color for light UI */
+    opacity: 1; /* Ensure full visibility */
+}
+
+/* Buttons */
 .stButton>button {
     background-color: #4CAF50;
     color: white;
@@ -29,13 +52,8 @@
     background-color: #3e8e41;
     transform: scale(1.02);
 }
-.stTextInput>div>div>input, .stTextArea>div>div>textarea {
-    border-radius: 8px;
-    padding: 10px;
-    background-color: #ffffff;
-    color: #333;
-    border: 1px solid #ccc;
-}
+
+/* Radio buttons */
 .stRadio>div {
     flex-direction: row;
     gap: 1rem;
@@ -44,55 +62,82 @@
     margin-bottom: 0;
     color: #555;
 }
+
+/* Selectbox */
+.stSelectbox>div>div {
+    background-color: #ffffff;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+.stSelectbox label {
+    color: #555;
+}
+
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0;
 }
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     padding: 0 2rem;
-    background-color: #e3f2fd;
+    background-color: #ffffff; /* Light background for tabs */
     color: #333;
     border-radius: 0;
     margin-right: 0 !important;
+    border-bottom: 1px solid #ccc; /* Subtle separation */
 }
 .stTabs [aria-selected="true"] {
     background-color: #2196F3;
     color: white;
 }
+
+/* Containers */
 .block-container {
+    background-color: #ffffff; /* Remove black areas */
     padding-top: 2rem;
 }
+.st-bb, .st-at {
+    background-color: #ffffff; /* Ensure light background */
+}
+
+/* Progress bar */
 .stProgress>div>div>div>div {
     background-color: #2196F3;
 }
+
+/* Alerts */
 .stAlert {
     border-radius: 8px;
 }
+
+/* Expander */
 .stExpander {
-    background-color: white;
+    background-color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
+/* Font for markdown */
 .reportview-container .markdown-text-container {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .css-1aumxhk {
-    background-color: #e3f2fd;
+    background-color: #ffffff; /* Light background for consistency */
 }
-h1, h2, h3, h4, h5, h6 {
-    color: #2196F3;
-}
-.stMarkdown, .stText, .stLabel, p, div {
-    color: #555;
-}
+
+/* Links */
 a {
     color: #2196F3;
 }
+
+/* Header styling */
 div.header {
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    background-color: #ffffff; /* Light background */
 }
 div.header h1 {
     margin: 0;
@@ -103,17 +148,22 @@ div.header p {
     color: #555;
     font-size: 1.1rem;
 }
+
+/* Status bar */
 div.status-bar {
-    background-color: #e3f2fd;
+    background-color: #f0f7ff; /* Lighter background */
     padding: 0.5rem 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    color: #555;
 }
+
+/* Tab header */
 div.tab-header {
-    background-color: #e3f2fd;
+    background-color: #f0f7ff; /* Lighter background */
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -126,6 +176,8 @@ div.tab-header p {
     margin: 0.5rem 0 0;
     color: #555;
 }
+
+/* Hint, grading, and analytics boxes */
 div.hint-box {
     background-color: #e8f5e9;
     border-left: 4px solid #4CAF50;
@@ -159,9 +211,11 @@ div.analytics-box h4 {
     margin: 0 0 0.5rem;
     color: #7b1fa2;
 }
+
+/* Sidebar header and footer */
 div.sidebar-header {
-    background-color: #2196F3;
-    color: white;
+    background-color: #2196F3; /* Blue background */
+    color: #ffffff; /* White text for contrast */
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
