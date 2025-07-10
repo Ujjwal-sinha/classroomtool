@@ -1,4 +1,4 @@
-# Sahayak AI Education Platform - Enhanced UI Version with Theme Switcher
+# Sahayak AI Education Platform - Enhanced UI Version with Theme Switcher and Chatbot
 import streamlit as st
 from PIL import Image
 from dotenv import load_dotenv
@@ -29,7 +29,8 @@ from prompts import (
     get_test_creation_retry_prompt,
     get_hint_generator_prompt,
     get_grading_prompt,
-    get_analytics_prompt
+    get_analytics_prompt,
+    get_chatbot_prompt
 )
 
 # ------------------------ Setup ------------------------ #
@@ -95,7 +96,9 @@ if "class_level" not in st.session_state:
 if "language" not in st.session_state:
     st.session_state.language = "English"
 if "theme" not in st.session_state:
-    st.session_state.theme = "Dark"  # Set default theme to Dark
+    st.session_state.theme = "Dark"  # Default theme set to Dark
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # ------------------------ Helper Functions ------------------------ #
 def query_langchain(prompt: str, retry: bool = False) -> str:
@@ -400,8 +403,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Main tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📝 Test Creation", "💡 Hint Generator", "✅ Grading", "📊 Analytics", "📚 Class Prep"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📝 Test Creation", "💡 Hint Generator", "✅ Grading", "📊 Analytics", "📚 Class Prep", "🤖 Chat with Sahayak"
 ])
 
 # ------------------------ Test Creation Tab ------------------------ #
@@ -914,6 +917,60 @@ with tab5:
                         
                     except Exception as e:
                         st.error(f"Failed to generate lesson plan: {str(e)}")
+
+# ------------------------ Chat with Sahayak Tab ------------------------ #
+with tab6:
+    with st.container():
+        st.markdown("""
+            <div class="tab-header">
+                <h3>🤖 Chat with Sahayak</h3>
+                <p>Ask questions or seek guidance on education topics</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # User role selection
+        user_role = st.selectbox(
+            "Select Your Role",
+            ["Teacher", "Student"],
+            key="chat_user_role"
+        )
+
+        # Class level selection for context
+        class_level = st.selectbox(
+            "Select Class Level",
+            ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", 
+             "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"],
+            key="chat_class_level"
+        )
+
+        # Display chat history
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Chat input
+        if prompt := st.chat_input("Type your question here..."):
+            # Add user message to chat history
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Generate response
+            with st.chat_message("assistant"):
+                with st.spinner("🤖 Thinking..."):
+                    try:
+                        response = query_langchain(get_chatbot_prompt(prompt, user_role, class_level, st.session_state.chat_history))
+                        translated_response = translate_text(response, target_lang=st.session_state.language) if st.session_state.language != "English" else response
+                        st.markdown(translated_response)
+                        audio_base64 = text_to_speech(translated_response, st.session_state.language)
+                        if audio_base64:
+                            st.markdown("🔊 Listen to response:")
+                            play_audio(audio_base64)
+
+                        # Add assistant response to chat history
+                        st.session_state.chat_history.append({"role": "assistant", "content": translated_response})
+                    except Exception as e:
+                        st.error(f"❌ Chatbot error: {str(e)}")
 
 # ------------------------ Sidebar ------------------------ #
 with st.sidebar:

@@ -11,8 +11,8 @@
 
 /* Sidebar styling */
 .sidebar .sidebar-content {
-    background-color: #f0f7ff; /* Lighter background for light theme */
-    color: #333; /* Darker font color for visibility */
+    background-color: #f0f7ff;
+    color: #333;
 }
 
 /* Headings */
@@ -22,24 +22,24 @@ h1, h2, h3, h4, h5, h6 {
 
 /* General text and labels */
 .stMarkdown, .stText, .stLabel, p, div {
-    color: #474141;
+    color: #555;
 }
 
 /* Input fields */
-.stTextInput>div>div>input, .stTextArea>div>div>textarea {
+.stTextInput > div > div > input, .stTextArea > div > div > textarea {
     border-radius: 8px;
     padding: 10px;
     background-color: #ffffff;
     color: #333;
     border: 1px solid #ccc;
 }
-.stTextInput>div>div>input::placeholder, .stTextArea>div>div>textarea::placeholder {
-    color: #888; /* Lighter placeholder color for light UI */
-    opacity: 1; /* Ensure full visibility */
+.stTextInput > div > div > input::placeholder, .stTextArea > div > div > textarea::placeholder {
+    color: #888;
+    opacity: 1;
 }
 
 /* Buttons */
-.stButton>button {
+.stButton > button {
     background-color: #4CAF50;
     color: white;
     border-radius: 5px;
@@ -48,23 +48,23 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
     transition: all 0.3s;
 }
-.stButton>button:hover {
+.stButton > button:hover {
     background-color: #3e8e41;
     transform: scale(1.02);
 }
 
 /* Radio buttons */
-.stRadio>div {
+.stRadio > div {
     flex-direction: row;
     gap: 1rem;
 }
-.stRadio>div>label {
+.stRadio > div > label {
     margin-bottom: 0;
     color: #555;
 }
 
 /* Selectbox */
-.stSelectbox>div>div {
+.stSelectbox > div > div {
     background-color: #ffffff;
     color: #333;
     border: 1px solid #ccc;
@@ -81,11 +81,11 @@ h1, h2, h3, h4, h5, h6 {
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     padding: 0 2rem;
-    background-color: #ffffff; /* Light background for tabs */
+    background-color: #ffffff;
     color: #333;
     border-radius: 0;
     margin-right: 0 !important;
-    border-bottom: 1px solid #ccc; /* Subtle separation */
+    border-bottom: 1px solid #ccc;
 }
 .stTabs [aria-selected="true"] {
     background-color: #2196F3;
@@ -94,15 +94,15 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Containers */
 .block-container {
-    background-color: #ffffff; /* Remove black areas */
+    background-color: #ffffff;
     padding-top: 2rem;
 }
 .st-bb, .st-at {
-    background-color: #ffffff; /* Ensure light background */
+    background-color: #ffffff;
 }
 
 /* Progress bar */
-.stProgress>div>div>div>div {
+.stProgress > div > div > div > div {
     background-color: #2196F3;
 }
 
@@ -123,7 +123,7 @@ h1, h2, h3, h4, h5, h6 {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .css-1aumxhk {
-    background-color: #ffffff; /* Light background for consistency */
+    background-color: #ffffff;
 }
 
 /* Links */
@@ -137,7 +137,7 @@ div.header {
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
-    background-color: #ffffff; /* Light background */
+    background-color: #ffffff;
 }
 div.header h1 {
     margin: 0;
@@ -151,7 +151,7 @@ div.header p {
 
 /* Status bar */
 div.status-bar {
-    background-color: #f0f7ff; /* Lighter background */
+    background-color: #f0f7ff;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -163,7 +163,7 @@ div.status-bar {
 
 /* Tab header */
 div.tab-header {
-    background-color: #f0f7ff; /* Lighter background */
+    background-color: #f0f7ff;
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -214,8 +214,8 @@ div.analytics-box h4 {
 
 /* Sidebar header and footer */
 div.sidebar-header {
-    background-color: #93bfe2; /* Blue background */
-    color: #ffffff; /* White text for "Teacher Dashboard" */
+    background-color: #2196F3;
+    color: #ffffff;
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -224,4 +224,25 @@ div.footer {
     text-align: center;
     color: #666;
     font-size: 0.9rem;
+}
+
+/* Chat styling */
+.stChatMessage {
+    background-color: #f0f7ff;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+}
+.stChatMessage.user {
+    background-color: #e3f2fd;
+    text-align: right;
+}
+.stChatMessage.assistant {
+    background-color: #ffffff;
+}
+.stChatInput {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 5px;
+    background-color: #ffffff;
 }

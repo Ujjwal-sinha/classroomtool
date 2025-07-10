@@ -1,143 +1,155 @@
 /* Dark Theme */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap');
 
-.main, .stApp {
+/* Main app background */
+.main {
     background-color: #1e1e2e;
-    color: #e0e0e0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+.stApp {
+    background-image: linear-gradient(to bottom, #252537, #1e1e2e);
+}
+
+/* Sidebar styling */
 .sidebar .sidebar-content {
     background-color: #252537;
     color: #e0e0e0;
 }
+
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
-    color: #ffffff;
-    font-weight: 600;
+    color: #42a5f5;
 }
+
+/* General text and labels */
 .stMarkdown, .stText, .stLabel, p, div {
-    color: #d1d1d6;
-}
-.stTextInput>div>div>input, .stTextArea>div>div>textarea {
-    background-color: #2a2a3b;
     color: #e0e0e0;
-    border: 1px solid #3c3c4e;
+}
+
+/* Input fields */
+.stTextInput > div > div > input, .stTextArea > div > div > textarea {
     border-radius: 8px;
     padding: 10px;
+    background-color: #2e2e42;
+    color: #e0e0e0;
+    border: 1px solid #444;
 }
-.stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
-    border-color: #4e89ff;
-    box-shadow: 0 0 5px rgba(78, 137, 255, 0.5);
+.stTextInput > div > div > input::placeholder, .stTextArea > div > div > textarea::placeholder {
+    color: #999;
+    opacity: 1;
 }
-.stButton>button {
-    background-color: #4e89ff;
-    color: #ffffff;
+
+/* Buttons */
+.stButton > button {
+    background-color: #4CAF50;
+    color: white;
     border-radius: 5px;
     padding: 0.5rem 1rem;
     border: none;
     font-weight: 500;
     transition: all 0.3s;
 }
-.stButton>button:hover {
-    background-color: #3a6df0;
+.stButton > button:hover {
+    background-color: #3e8e41;
     transform: scale(1.02);
 }
-.stButton>button:disabled {
-    background-color: #3c3c4e;
-    color: #6e6e80;
-}
-.stRadio>div {
+
+/* Radio buttons */
+.stRadio > div {
     flex-direction: row;
     gap: 1rem;
 }
-.stRadio label {
-    color: #d1d1d6;
-}
-.stRadio [data-baseweb="radio"] {
-    background-color: #2a2a3b;
-    border: 2px solid #3c3c4e;
-}
-.stRadio [data-baseweb="radio"]:checked {
-    background-color: #4e89ff;
-    border-color: #4e89ff;
-}
-.stSelectbox>div>div {
-    background-color: #2a2a3b;
+.stRadio > div > label {
+    margin-bottom: 0;
     color: #e0e0e0;
-    border: 1px solid #3c3c4e;
+}
+
+/* Selectbox */
+.stSelectbox > div > div {
+    background-color: #2e2e42;
+    color: #e0e0e0;
+    border: 1px solid #444;
     border-radius: 8px;
 }
+.stSelectbox label {
+    color: #e0e0e0;
+}
+
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
-    background-color: #252537;
     gap: 0;
 }
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     padding: 0 2rem;
     background-color: #252537;
-    color: #d1d1d6;
+    color: #e0e0e0;
     border-radius: 0;
     margin-right: 0 !important;
+    border-bottom: 1px solid #444;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4e89ff;
-    color: #ffffff;
+    background-color: #42a5f5;
+    color: white;
 }
+
+/* Containers */
 .block-container {
+    background-color: #1e1e2e;
     padding-top: 2rem;
 }
 .st-bb, .st-at {
-    background-color: #252537;
+    background-color: #1e1e2e;
 }
-.stProgress>div>div>div>div {
-    background-color: #4e89ff;
+
+/* Progress bar */
+.stProgress > div > div > div > div {
+    background-color: #42a5f5;
 }
+
+/* Alerts */
 .stAlert {
-    background-color: #2a2a3b;
-    color: #e0e0e0;
-    border: 1px solid #3c3c4e;
     border-radius: 8px;
 }
-.stAlert.stSuccess {
-    border-left: 4px solid #4caf50;
-}
-.stAlert.stError {
-    border-left: 4px solid #f44336;
-}
-.stAlert.stWarning {
-    border-left: 4px solid #ff9800;
-}
+
+/* Expander */
 .stExpander {
     background-color: #252537;
-    color: #e0e0e0;
-    border: 1px solid #3c3c4e;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
-.stExpander summary {
-    background-color: #2a2a3b;
-    color: #e0e0e0;
+
+/* Font for markdown */
+.reportview-container .markdown-text-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+.css-1aumxhk {
+    background-color: #1e1e2e;
+}
+
+/* Links */
 a {
-    color: #4e89ff;
+    color: #42a5f5;
 }
-img[src*="icons8.com"] {
-    filter: brightness(0) invert(1);
-}
+
+/* Header styling */
 div.header {
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    background-color: #252537;
 }
 div.header h1 {
     margin: 0;
-    color: #4e89ff;
+    color: #42a5f5;
 }
 div.header p {
     margin: 0;
-    color: #d1d1d6;
+    color: #e0e0e0;
     font-size: 1.1rem;
 }
+
+/* Status bar */
 div.status-bar {
     background-color: #252537;
     padding: 0.5rem 1rem;
@@ -148,6 +160,8 @@ div.status-bar {
     align-items: center;
     color: #e0e0e0;
 }
+
+/* Tab header */
 div.tab-header {
     background-color: #252537;
     padding: 1rem;
@@ -156,47 +170,54 @@ div.tab-header {
 }
 div.tab-header h3 {
     margin: 0;
-    color: #4e89ff;
+    color: #42a5f5;
 }
 div.tab-header p {
     margin: 0.5rem 0 0;
-    color: #d1d1d6;
+    color: #e0e0e0;
 }
+
+/* Hint, grading, and analytics boxes */
 div.hint-box {
-    background-color: #2a3b2a;
-    border-left: 4px solid #4caf50;
+    background-color: #2e7d32;
+    border-left: 4px solid #4CAF50;
     padding: 1rem;
     border-radius: 0 8px 8px 0;
     margin: 1rem 0;
+    color: #e0e0e0;
 }
 div.hint-box h4 {
     margin: 0 0 0.5rem;
-    color: #4caf50;
+    color: #c8e6c9;
 }
 div.grading-box {
-    background-color: #3b2f2a;
-    border-left: 4px solid #ff9800;
+    background-color: #ff9800;
+    border-left: 4px solid #ffc107;
     padding: 1rem;
     border-radius: 0 8px 8px 0;
     margin: 1rem 0;
+    color: #e0e0e0;
 }
 div.grading-box h4 {
     margin: 0 0 0.5rem;
-    color: #ff9800;
+    color: #ffe0b2;
 }
 div.analytics-box {
-    background-color: #3b2a3b;
+    background-color: #7b1fa2;
     border-left: 4px solid #9c27b0;
     padding: 1rem;
     border-radius: 0 8px 8px 0;
     margin: 1rem 0;
+    color: #e0e0e0;
 }
 div.analytics-box h4 {
     margin: 0 0 0.5rem;
-    color: #9c27b0;
+    color: #ce93d8;
 }
+
+/* Sidebar header and footer */
 div.sidebar-header {
-    background-color: #4e89ff;
+    background-color: #ebf1f7;
     color: #ffffff;
     padding: 1rem;
     border-radius: 8px;
@@ -204,6 +225,35 @@ div.sidebar-header {
 }
 div.footer {
     text-align: center;
-    color: #a0a0a8;
+    color: #999;
     font-size: 0.9rem;
+}
+
+/* Chat styling */
+.stChatMessage {
+    background-color: #252537;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    color: #e0e0e0;
+}
+.stChatMessage.user {
+    background-color: #2e2e42;
+    text-align: right;
+}
+.stChatMessage.assistant {
+    background-color: #1e1e2e;
+}
+.stChatInput {
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 5px;
+    background-color: #2e2e42;
+    color: #e0e0e0;
+}
+.stChatInput input {
+    color: #e0e0e0;
+}
+.stChatInput input::placeholder {
+    color: #999;
 }
