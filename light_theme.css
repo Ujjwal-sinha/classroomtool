@@ -22,7 +22,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* General text and labels */
 .stMarkdown, .stText, .stLabel, p, div {
-    color: #555;
+    color: #474141;
 }
 
 /* Input fields */
@@ -214,8 +214,8 @@ div.analytics-box h4 {
 
 /* Sidebar header and footer */
 div.sidebar-header {
-    background-color: #2196F3; /* Blue background */
-    color: #ffffff; /* White text for contrast */
+    background-color: #93bfe2; /* Blue background */
+    color: #ffffff; /* White text for "Teacher Dashboard" */
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
