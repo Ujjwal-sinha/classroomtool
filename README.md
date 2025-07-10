@@ -4,23 +4,9 @@
 
 **Version:** 1.0  
 **Last Updated:** July 10, 2025, 01:24 PM IST  
-**Developed by:** AI for Education Initiative  
+
 
 Welcome to **Sahayak**, an AI-powered education platform designed to empower teachers and students in low-resource classrooms. Built with Streamlit and integrated with advanced language models (via Groq API), Sahayak offers tools for test creation, hint generation, grading, analytics, lesson planning, and a conversational chatbot. This platform supports multiple languages and culturally relevant content to enhance learning experiences.
-
----
-
-## 📚 Table of Contents
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [File Structure](#file-structure)
-- [Configuration](#configuration)
-- [Technical Details](#technical-details)
-- [Contributing](#contributing)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
-- [Contact](#contact)
 
 ---
 
@@ -175,6 +161,20 @@ project_directory/
 - **Web Scraping**: [Playwright](https://playwright.dev/)
 - **Styling**: Custom CSS (`light_theme.css`, `dark_theme.css`)
 - **Session Management**: `st.session_state` in Streamlit
+
+---
+
+## 🔮 Future Stack
+
+In future releases, Sahayak will integrate with the following technologies to improve scalability, intelligence, and real-time capability:
+
+- **🔮 Vertex AI**: Host and run scalable, custom AI models and pipelines.
+- **🧠 Gemini**: Multimodal LLM for image, text, and classroom intelligence tasks.
+- **🔥 Firebase**: Backend service for auth, hosting, and real-time sync support.
+- **🗃️ Firestore**: NoSQL database for storing user, test, and analytics data.
+- **📦 Cloud Storage**: Save user uploads like images, audio, reports in cloud.
+- **🧩 Firebase Studio**: Drag-and-drop builder for teacher dashboards and mobile UI.
+- **📡 Pub/Sub**: Triggers real-time processing like grading, feedback, or report creation.
 
 ---
 
