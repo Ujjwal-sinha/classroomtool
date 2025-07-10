@@ -1,5 +1,4 @@
-# Sahayak AI Education Platform - Enhanced UI Version
-# Import required libraries
+# Sahayak AI Education Platform - Enhanced UI Version with Theme Switcher
 import streamlit as st
 from PIL import Image
 from dotenv import load_dotenv
@@ -44,8 +43,6 @@ st.set_page_config(
 # Load environment variables
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
-
-# Check for required API key
 if not groq_api_key:
     st.error("GROQ_API_KEY not found in .env file.")
     st.stop()
@@ -59,7 +56,6 @@ def load_models():
     """Load and cache AI models"""
     models = {}
     try:
-        # Initialize LLM
         models['llm'] = ChatGroq(
             model_name="gemma2-9b-it",
             api_key=groq_api_key
@@ -69,16 +65,11 @@ def load_models():
         models['llm'] = None
     
     try:
-        # Initialize image processing models
         device = "cuda" if torch.cuda.is_available() else "cpu"
         dtype = torch.float16 if device == "cuda" else torch.float32
-        
-        models['processor'] = BlipProcessor.from_pretrained(
-            "Salesforce/blip-image-captioning-base"
-        )
+        models['processor'] = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
-            "Salesforce/blip-image-captioning-base",
-            torch_dtype=dtype
+            "Salesforce/blip-image-captioning-base", torch_dtype=dtype
         ).to(device)
         models['blip_model'].eval()
     except Exception as e:
@@ -103,6 +94,8 @@ if "class_level" not in st.session_state:
     st.session_state.class_level = "Class 5"
 if "language" not in st.session_state:
     st.session_state.language = "English"
+if "theme" not in st.session_state:
+    st.session_state.theme = "Light"
 
 # ------------------------ Helper Functions ------------------------ #
 def query_langchain(prompt: str, retry: bool = False) -> str:
@@ -121,8 +114,7 @@ def process_image(image: Image.Image, use_ocr: bool = True) -> str:
     if use_ocr:
         try:
             text = pytesseract.image_to_string(
-                image,
-                lang="eng+hin+tam+ben+tel+mar+guj+kan+mal+pan"
+                image, lang="eng+hin+tam+ben+tel+mar+guj+kan+mal+pan"
             )
             if text.strip():
                 return text.strip()
@@ -153,7 +145,6 @@ def process_url(url: str) -> str:
             page = browser.new_page()
             page.goto(url, timeout=10000)
             page.wait_for_load_state("domcontentloaded")
-            content = page.content()
             text = page.evaluate(
                 """() => {
                     document.querySelectorAll('script, style, nav, header, footer').forEach(el => el.remove());
@@ -215,7 +206,7 @@ def translate_text(text: str, target_lang: str = "en") -> str:
                 return translated
             if attempt < max_retries - 1:
                 time.sleep(1)
-        except Exception as e:
+        except Exception:
             if attempt < max_retries - 1:
                 time.sleep(1)
     
@@ -319,16 +310,13 @@ def generate_lq_chart(student_data: Dict[str, float]) -> str:
     return chart_path
 
 def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_path: str) -> str:
-    """Generate PDF report using standard fonts only"""
+    """Generate PDF report using standard fonts"""
     try:
         pdf = FPDF()
         pdf.add_page()
-        
-        # Use standard FPDF fonts (Helvetica, Times, Courier)
         pdf.set_font("Helvetica", "B", 16)
         pdf.cell(0, 10, "Sahayak Assessment Report", ln=1, align="C")
         
-        # Questions section
         pdf.set_font("Helvetica", "B", 12)
         pdf.cell(0, 10, "Generated Questions", ln=1)
         pdf.set_font("Helvetica", "", 10)
@@ -337,303 +325,92 @@ def generate_pdf_report(questions: List[Dict[str, Any]], analysis: str, chart_pa
             if "error" in q:
                 pdf.multi_cell(0, 8, q["error"])
                 continue
-            
-            # Handle non-ASCII characters by replacing unsupported ones
             question_text = q['question'].encode('ascii', 'replace').decode('ascii')
             pdf.multi_cell(0, 8, f"Question: {question_text}")
-            
             pdf.cell(0, 8, f"Type: {q['type']}", ln=1)
-            
             if q['options']:
-                options_text = "; ".join(
-                    opt.encode('ascii', 'replace').decode('ascii') 
-                    for opt in q['options']
-                )
+                options_text = "; ".join(opt.encode('ascii', 'replace').decode('ascii') for opt in q['options'])
                 pdf.multi_cell(0, 8, f"Options: {options_text}")
             else:
                 pdf.cell(0, 8, "Options: None", ln=1)
-            
             answer_text = q['answer'].encode('ascii', 'replace').decode('ascii')
             pdf.cell(0, 8, f"Correct Answer: {answer_text}", ln=1)
             pdf.cell(0, 8, f"Difficulty: {q['difficulty']}", ln=1)
             pdf.ln(5)
         
-        # Analysis section
         pdf.set_font("Helvetica", "B", 12)
         pdf.cell(0, 10, "Analysis", ln=1)
         pdf.set_font("Helvetica", "", 10)
-        
         analysis_text = analysis.encode('ascii', 'replace').decode('ascii') if analysis else "No analysis provided"
         pdf.multi_cell(0, 8, analysis_text)
         pdf.ln(10)
         
-        # Add chart if available
         if chart_path and os.path.exists(chart_path):
             pdf.image(chart_path, w=180)
         
-        # Footer
         pdf.set_font("Helvetica", "I", 8)
         pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} IST", 0, 0, "C")
         
         pdf_path = "sahayak_report.pdf"
         pdf.output(pdf_path)
-        
         return pdf_path
     except Exception as e:
         st.error(f"PDF generation failed: {e}")
         return ""
 
 # ------------------------ Custom CSS ------------------------ #
-st.markdown("""
-    <style>
-        /* Main app background */
-        .main, .stApp {
-            background-color: #1e1e2e;
-            color: #e0e0e0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
+# Load CSS based on selected theme
+def load_css(file_path):
+    """Load CSS file content"""
+    try:
+        with open(file_path, "r") as f:
+            return f"<style>{f.read()}</style>"
+    except FileNotFoundError:
+        st.error(f"CSS file {file_path} not found.")
+        return ""
 
-        /* Sidebar styling */
-        .sidebar .sidebar-content {
-            background-color: #252537;
-            color: #e0e0e0;
-        }
-
-        /* Headings */
-        h1, h2, h3, h4, h5, h6 {
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        /* Text and labels */
-        .stMarkdown, .stText, .stLabel, p, div {
-            color: #d1d1d6;
-        }
-
-        /* Input fields */
-        .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-            background-color: #2a2a3b;
-            color: #e0e0e0;
-            border: 1px solid #3c3c4e;
-            border-radius: 8px;
-            padding: 10px;
-        }
-        .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
-            border-color: #4e89ff;
-            box-shadow: 0 0 5px rgba(78, 137, 255, 0.5);
-        }
-
-        /* Buttons */
-        .stButton>button {
-            background-color: #4e89ff;
-            color: #ffffff;
-            border-radius: 5px;
-            padding: 0.5rem 1rem;
-            border: none;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-        .stButton>button:hover {
-            background-color: #3a6df0;
-            transform: scale(1.02);
-        }
-        .stButton>button:disabled {
-            background-color: #3c3c4e;
-            color: #6e6e80;
-        }
-
-        /* Radio buttons */
-        .stRadio>div {
-            flex-direction: row;
-            gap: 1rem;
-        }
-        .stRadio label {
-            color: #d1d1d6;
-        }
-        .stRadio [data-baseweb="radio"] {
-            background-color: #2a2a3b;
-            border: 2px solid #3c3c4e;
-        }
-        .stRadio [data-baseweb="radio"]:checked {
-            background-color: #4e89ff;
-            border-color: #4e89ff;
-        }
-
-        /* Selectbox */
-        .stSelectbox>div>div {
-            background-color: #2a2a3b;
-            color: #e0e0e0;
-            border: 1px solid #3c3c4e;
-            border-radius: 8px;
-        }
-
-        /* Tabs */
-        .stTabs [data-baseweb="tab-list"] {
-            background-color: #252537;
-            gap: 0;
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px;
-            padding: 0 2rem;
-            background-color: #252537;
-            color: #d1d1d6;
-            border-radius: 0;
-            margin-right: 0 !important;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4e89ff;
-            color: #ffffff;
-        }
-
-        /* Containers */
-        .block-container {
-            padding-top: 2rem;
-        }
-        .st-bb, .st-at {
-            background-color: #252537;
-        }
-
-        /* Progress bar */
-        .stProgress>div>div>div>div {
-            background-color: #4e89ff;
-        }
-
-        /* Alerts */
-        .stAlert {
-            background-color: #2a2a3b;
-            color: #e0e0e0;
-            border: 1px solid #3c3c4e;
-            border-radius: 8px;
-        }
-        .stAlert.stSuccess {
-            border-left: 4px solid #4caf50;
-        }
-        .stAlert.stError {
-            border-left: 4px solid #f44336;
-        }
-        .stAlert.stWarning {
-            border-left: 4px solid #ff9800;
-        }
-
-        /* Expander */
-        .stExpander {
-            background-color: #252537;
-            color: #e0e0e0;
-            border: 1px solid #3c3c4e;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-        .stExpander summary {
-            background-color: #2a2a3b;
-            color: #e0e0e0;
-        }
-
-        /* Custom containers (e.g., header, status bar) */
-        [style*="background-color: #e3f2fd"] {
-            background-color: #252537 !important;
-            color: #e0e0e0 !important;
-        }
-        [style*="color: #2196F3"] {
-            color: #4e89ff !important;
-        }
-        [style*="color: #555"] {
-            color: #d1d1d6 !important;
-        }
-
-        /* Grading and Hint boxes */
-        [style*="background-color: #e8f5e9"] {
-            background-color: #2a3b2a !important;
-            border-left: 4px solid #4caf50 !important;
-        }
-        [style*="color: #2e7d32"] {
-            color: #4caf50 !important;
-        }
-        [style*="background-color: #fff8e1"] {
-            background-color: #3b2f2a !important;
-            border-left: 4px solid #ff9800 !important;
-        }
-        [style*="color: #ff8f00"] {
-            color: #ff9800 !important;
-        }
-        [style*="background-color: #f3e5f5"] {
-            background-color: #3b2a3b !important;
-            border-left: 4px solid #9c27b0 !important;
-        }
-        [style*="color: #7b1fa2"] {
-            color: #9c27b0 !important;
-        }
-
-        /* Sidebar header */
-        [style*="background-color: #2196F3"] {
-            background-color: #4e89ff !important;
-        }
-
-        /* Footer */
-        [style*="color: #666"] {
-            color: #a0a0a8 !important;
-        }
-
-        /* Links and images */
-        a {
-            color: #4e89ff;
-        }
-        img[src*="icons8.com"] {
-            filter: brightness(0) invert(1);
-        }
-    </style>
-""", unsafe_allow_html=True)
+css_file = "light_theme.css" if st.session_state.theme == "Light" else "dark_theme.css"
+st.markdown(load_css(css_file), unsafe_allow_html=True)
 
 # ------------------------ Main UI ------------------------ #
 # Header with logo and title
 st.markdown(
     """
-    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="header">
         <img src="https://img.icons8.com/color/48/000000/book.png" width="48">
         <div>
-            <h1 style="margin: 0; color: #2196F3;">Sahayak: AI Education Platform</h1>
-            <p style="margin: 0; color: #555; font-size: 1.1rem;">Empowering teachers in low-resource classrooms</p>
+            <h1>Sahayak: AI Education Platform</h1>
+            <p>Empowering teachers in low-resource classrooms</p>
         </div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Status bar
-# Time display only
-# Time display with Sahayak AI branding
+# Status bar with time display
 st.markdown(f"""
-    <div style="background-color: #e3f2fd; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-weight: bold; color: #2196F3; font-size: 1.1rem;">
-                Sahayak AI
-            </div>
-            <div>
-                <strong>📅 {datetime.now().strftime('%Y-%m-%d %H:%M')} IST</strong>
-            </div>
+    <div class="status-bar">
+        <div>
+            <strong>Sahayak AI</strong>
+        </div>
+        <div>
+            <strong>📅 {datetime.now().strftime('%Y-%m-%d %H:%M')} IST</strong>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
 # Main tabs
-# Add with other tab definitions
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📝 Test Creation", 
-    "💡 Hint Generator", 
-    "✅ Grading", 
-    "📊 Analytics",
-    "📚 Class Prep"
+    "📝 Test Creation", "💡 Hint Generator", "✅ Grading", "📊 Analytics", "📚 Class Prep"
 ])
-
-# Add this new tab section
-
 
 # ------------------------ Test Creation Tab ------------------------ #
 with tab1:
     with st.container():
         st.markdown("""
-            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2196F3;">Create Custom Assessments</h3>
-                <p style="margin: 0.5rem 0 0; color: #555;">Generate tests from various input sources</p>
+            <div class="tab-header">
+                <h3>Create Custom Assessments</h3>
+                <p>Generate tests from various input sources</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -647,15 +424,12 @@ with tab1:
                 horizontal=True
             )
             
-            # Initialize input_data as None
             input_data = None
-            
             if input_type == "Textbook Photo":
                 img_file = st.file_uploader(
                     "Upload textbook page",
                     type=["jpg", "jpeg", "png"],
-                    key="test_creation_image",
-                    help="Take a clear photo of the textbook page or worksheet"
+                    key="test_creation_image"
                 )
                 if img_file:
                     input_data = Image.open(img_file)
@@ -668,7 +442,7 @@ with tab1:
                     key="test_creation_text",
                     height=150
                 )
-            else:  # URL
+            else:
                 input_data = st.text_input(
                     "Enter educational content URL",
                     placeholder="E.g. https://example.com/science-lesson",
@@ -696,27 +470,19 @@ with tab1:
                 translate_to = st.selectbox(
                     "Translate To",
                     ["English", "Hindi", "Tamil", "Bengali", "Telugu", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
-                    key="translate_to",
-                    index=0
+                    key="translate_to"
                 )
         
-        # Check if input_data has been set (not None and not empty string)
         is_input_valid = False
         if input_data is not None:
             if isinstance(input_data, str):
                 is_input_valid = bool(input_data.strip())
-            else:  # For image objects
+            else:
                 is_input_valid = True
         
-        if st.button(
-            "✨ Generate Assessment",
-            disabled=not is_input_valid,
-            key="test_creation_generate",
-            help="Generate customized test based on your inputs"
-        ):
-            with st.spinner("🧠 Generating your assessment... This may take a moment"):
+        if st.button("✨ Generate Assessment", disabled=not is_input_valid, key="test_creation_generate"):
+            with st.spinner("🧠 Generating your assessment..."):
                 try:
-                    # Process input based on type
                     if input_type == "Textbook Photo":
                         content = process_image(input_data)
                     elif input_type == "URL":
@@ -727,14 +493,11 @@ with tab1:
                     if "Error" in content:
                         st.error(content)
                         st.stop()
-
             
-                    # Generate test content
                     prompt = get_test_creation_prompt(content, context, st.session_state.class_level, num_questions)
                     test_content = query_langchain(prompt)
                     questions = extract_questions_and_answers(test_content)
 
-                    # Retry if parsing fails
                     if questions and "error" in questions[0]:
                         st.warning("Parsing failed. Retrying...")
                         simplified_prompt = get_test_creation_retry_prompt(content, context, st.session_state.class_level, num_questions)
@@ -745,22 +508,19 @@ with tab1:
                         st.error(f"Failed to parse questions: {questions[0]['error']}")
                         st.stop()
 
-                    # Prepare original and translated versions
                     original_questions = questions
                     original_test_content = format_test_suite(original_questions)
                     translated_questions = translate_test_suite(questions, translate_to)
                     translated_test_content = format_test_suite(translated_questions)
 
-                    # Display results
                     st.success("✅ Assessment generated successfully!")
                     
                     with st.expander("📄 Original Test (English)", expanded=True):
                         st.markdown(original_test_content)
                     
-                    with st.expander(f"🌍 Translated Test ({translate_to})", expanded=False):
+                    with st.expander(f"🌍 Translated Test ({translate_to})"):
                         st.markdown(translated_test_content)
                     
-                    # Audio options
                     if st.checkbox("🔊 Enable audio for questions", key="enable_audio"):
                         for i, q in enumerate(translated_questions, 1):
                             if "error" not in q:
@@ -769,7 +529,6 @@ with tab1:
                                     st.markdown(f"**Question {i} Audio:**")
                                     play_audio(audio_base64)
                     
-                    # Store results
                     st.session_state.last_results = {
                         "type": "test",
                         "input_type": input_type,
@@ -784,12 +543,7 @@ with tab1:
                     }
                     st.session_state.test_history.append(st.session_state.last_results)
                     
-                    # Generate PDF
-                    pdf_path = generate_pdf_report(
-                        translated_questions,
-                        translated_test_content,
-                        None
-                    )
+                    pdf_path = generate_pdf_report(translated_questions, translated_test_content, None)
                     if pdf_path and os.path.exists(pdf_path):
                         with open(pdf_path, "rb") as f:
                             st.download_button(
@@ -809,9 +563,9 @@ with tab1:
 with tab2:
     with st.container():
         st.markdown("""
-            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2196F3;">Personalized Hint Generator</h3>
-                <p style="margin: 0.5rem 0 0; color: #555;">Create scaffolded hints for struggling students</p>
+            <div class="tab-header">
+                <h3>Personalized Hint Generator</h3>
+                <p>Create scaffolded hints for struggling students</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -826,8 +580,7 @@ with tab2:
             "Student's Attempt (Optional)",
             placeholder="E.g. x = 10",
             key="hint_generator_response",
-            height=100,
-            help="Provide the student's answer (if available) for more targeted hints"
+            height=100
         )
         
         hint_level = st.slider(
@@ -835,16 +588,10 @@ with tab2:
             min_value=1,
             max_value=3,
             value=2,
-            key="hint_level",
-            help="1: General guidance, 3: Specific step-by-step help"
+            key="hint_level"
         )
         
-        if st.button(
-            "💡 Generate Hint",
-            disabled=not question,
-            key="hint_generator_generate",
-            help="Create a scaffolded hint based on the question"
-        ):
+        if st.button("💡 Generate Hint", disabled=not question, key="hint_generator_generate"):
             with st.spinner("🤔 Crafting the perfect hint..."):
                 try:
                     prompt = get_hint_generator_prompt(question, student_response, hint_level)
@@ -855,27 +602,18 @@ with tab2:
                     
                     st.success("✅ Hint generated successfully!")
                     
-                    # Display hint in styled box
                     st.markdown(f"""
-                        <div style="
-                            background-color: #e8f5e9;
-                            border-left: 4px solid #4CAF50;
-                            padding: 1rem;
-                            border-radius: 0 8px 8px 0;
-                            margin: 1rem 0;
-                        ">
-                            <h4 style="margin: 0 0 0.5rem; color: #2e7d32;">Generated Hint:</h4>
-                            <p style="margin: 0;">{hint}</p>
+                        <div class="hint-box">
+                            <h4>Generated Hint:</h4>
+                            <p>{hint}</p>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Add audio option
                     audio_base64 = text_to_speech(hint, st.session_state.language)
                     if audio_base64:
                         st.markdown("🔊 Listen to hint:")
                         play_audio(audio_base64)
                     
-                    # Store results
                     st.session_state.test_history.append({
                         "type": "hint",
                         "question": question,
@@ -891,9 +629,9 @@ with tab2:
 with tab3:
     with st.container():
         st.markdown("""
-            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2196F3;">Automated Grading Assistant</h3>
-                <p style="margin: 0.5rem 0 0; color: #555;">Evaluate student responses with AI feedback</p>
+            <div class="tab-header">
+                <h3>Automated Grading Assistant</h3>
+                <p>Evaluate student responses with AI feedback</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -915,8 +653,7 @@ with tab3:
             img_file = st.file_uploader(
                 "Upload Handwritten Answer",
                 type=["jpg", "jpeg", "png"],
-                key="grading_image",
-                help="Upload a clear photo of the student's handwritten work"
+                key="grading_image"
             )
             if img_file:
                 image = Image.open(img_file)
@@ -936,14 +673,9 @@ with tab3:
             height=100
         )
         
-        if st.button(
-            "📝 Grade Response",
-            disabled=not (correct_answer and (student_response or img_file)),
-            key="grading_generate_text"
-        ):
+        if st.button("📝 Grade Response", disabled=not (correct_answer and (student_response or img_file)), key="grading_generate"):
             with st.spinner("🔍 Analyzing response..."):
                 try:
-                    # Process response based on type
                     if response_type == "Handwritten Response":
                         description = process_image(image)
                         if "Error" in description:
@@ -971,11 +703,9 @@ with tab3:
                             "rubric": rubric
                         }]
                     
-                    # Get grading result
                     prompt = get_grading_prompt(responses[0]["response"], responses[0]["correct_answer"], responses[0]["rubric"])
                     grading_result = query_langchain(prompt)
                     
-                    # Translate feedback if needed
                     if st.session_state.language != "English":
                         feedback_match = re.search(r'\*\*Feedback\*\*: (.*)', grading_result, re.DOTALL)
                         if feedback_match:
@@ -985,27 +715,15 @@ with tab3:
                     
                     st.success("✅ Grading complete!")
                     
-                    # Display results in styled box
                     st.markdown(f"""
-                        <div style="
-                            background-color: #fff8e1;
-                            border-left: 4px solid #ffc107;
-                            padding: 1rem;
-                            border-radius: 0 8px 8px 0;
-                            margin: 1rem 0;
-                        ">
-                            <h4 style="margin: 0 0 0.5rem; color: #ff8f00;">Grading Results:</h4>
-                            <div style="margin-bottom: 0.5rem;">
-                                <strong>Student Response:</strong> {responses[0]['original_response']}
-                            </div>
-                            <div style="margin-bottom: 0.5rem;">
-                                <strong>Correct Answer:</strong> {responses[0]['correct_answer']}
-                            </div>
+                        <div class="grading-box">
+                            <h4>Grading Results:</h4>
+                            <div><strong>Student Response:</strong> {responses[0]['original_response']}</div>
+                            <div><strong>Correct Answer:</strong> {responses[0]['correct_answer']}</div>
                             <div>{grading_result}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Store results
                     st.session_state.test_history.append({
                         "type": "grade",
                         "response": responses[0]["response"],
@@ -1023,9 +741,9 @@ with tab3:
 with tab4:
     with st.container():
         st.markdown("""
-            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2196F3;">Learning Analytics Dashboard</h3>
-                <p style="margin: 0.5rem 0 0; color: #555;">Track student progress and performance</p>
+            <div class="tab-header">
+                <h3>Learning Analytics Dashboard</h3>
+                <p>Track student progress and performance</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1049,11 +767,7 @@ with tab4:
             key="analytics_time_range"
         )
         
-        if st.button(
-            "📈 Generate Insights",
-            disabled=not (student_id and topic),
-            key="analytics_generate"
-        ):
+        if st.button("📈 Generate Insights", disabled=not (student_id and topic), key="analytics_generate"):
             with st.spinner("📊 Analyzing learning patterns..."):
                 try:
                     prompt = get_analytics_prompt(student_id, topic, time_range)
@@ -1062,27 +776,18 @@ with tab4:
                     
                     st.success("✅ Analytics generated!")
                     
-                    # Display insights in styled box
                     st.markdown(f"""
-                        <div style="
-                            background-color: #f3e5f5;
-                            border-left: 4px solid #9c27b0;
-                            padding: 1rem;
-                            border-radius: 0 8px 8px 0;
-                            margin: 1rem 0;
-                        ">
-                            <h4 style="margin: 0 0 0.5rem; color: #7b1fa2;">Learning Insights for {student_id}:</h4>
+                        <div class="analytics-box">
+                            <h4>Learning Insights for {student_id}:</h4>
                             <div>{translated_insights}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Generate and display LQ chart
                     student_data = {"accuracy": 85, "time_taken": 30, "hints_used": 2}
                     chart_path = generate_lq_chart(student_data)
                     if chart_path and os.path.exists(chart_path):
                         st.image(chart_path, use_column_width=True)
                     
-                    # Store results
                     st.session_state.test_history.append({
                         "type": "insights",
                         "student_id": student_id,
@@ -1092,7 +797,6 @@ with tab4:
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                     })
                     
-                    # Generate PDF report if this follows a test generation
                     if st.session_state.last_results.get("type") == "test":
                         pdf_path = generate_pdf_report(
                             st.session_state.last_results.get("questions", []),
@@ -1115,14 +819,13 @@ with tab4:
                 except Exception as e:
                     st.error(f"❌ Analytics failed: {str(e)}")
 
-# ------------------------ class Prep ------------------------ #
-
+# ------------------------ Class Prep Tab ------------------------ #
 with tab5:
     with st.container():
         st.markdown("""
-            <div style="background-color: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2196F3;">Lesson Planner & Material Generator</h3>
-                <p style="margin: 0.5rem 0 0; color: #555;">Create complete lesson plans with teaching materials</p>
+            <div class="tab-header">
+                <h3>Lesson Planner & Material Generator</h3>
+                <p>Create complete lesson plans with teaching materials</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1177,7 +880,7 @@ with tab5:
                 key="planner_language"
             )
         
-        if st.button("Generate Lesson Plan", key="generate_lesson_plan"):
+        if st.button("📚 Generate Lesson Plan", key="generate_lesson_plan"):
             if not topic:
                 st.warning("Please enter a topic/chapter")
             else:
@@ -1200,7 +903,6 @@ with tab5:
                         with st.expander("📝 Complete Lesson Plan", expanded=True):
                             st.markdown(lesson_plan)
                         
-                        # Add to session history
                         st.session_state.test_history.append({
                             "type": "lesson_plan",
                             "class_level": class_level,
@@ -1213,28 +915,34 @@ with tab5:
                     except Exception as e:
                         st.error(f"Failed to generate lesson plan: {str(e)}")
 
-
 # ------------------------ Sidebar ------------------------ #
 with st.sidebar:
     st.markdown("""
-        <div style="
-            background-color: #2196F3;
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        ">
-            <h2 style="margin: 0; color: white;">Teacher Dashboard</h2>
+        <div class="sidebar-header">
+            <h2>Teacher Dashboard</h2>
         </div>
     """, unsafe_allow_html=True)
     
-    # Class Settings section - no expander needed since it's already in sidebar
+    # Theme selector
+    st.subheader("🎨 Theme Settings")
+    theme = st.selectbox(
+        "Select Theme",
+        ["Light", "Dark"],
+        key="theme_selector",
+        index=0 if st.session_state.theme == "Light" else 1
+    )
+    
+    if theme != st.session_state.theme:
+        st.session_state.theme = theme
+        st.experimental_rerun()
+    
+    # Class Settings
     st.subheader("⚙️ Class Settings")
     class_level = st.selectbox(
         "Grade Level",
         ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8"],
         key="dashboard_class_level",
-        index=4  # Default to Class 5
+        index=4
     )
     language = st.selectbox(
         "Feedback Language",
@@ -1244,12 +952,11 @@ with st.sidebar:
     st.session_state.class_level = class_level
     st.session_state.language = language
     
-    # Recent Activities section - using a single expander
+    # Recent Activities
     st.subheader("📚 Recent Activities")
     if not st.session_state.test_history:
         st.info("No recent activities yet")
     else:
-        # Create a selectbox to choose which activity to view details for
         activity_options = [
             f"{entry['timestamp']} - {entry['type'].title()}" 
             for entry in reversed(st.session_state.test_history[-5:])
@@ -1260,13 +967,11 @@ with st.sidebar:
             key="activity_selector"
         )
         
-        # Find the selected activity
         selected_entry = next(
             entry for entry in reversed(st.session_state.test_history[-5:])
             if f"{entry['timestamp']} - {entry['type'].title()}" == selected_activity
         )
         
-        # Display details of the selected activity
         if selected_entry['type'] == "test":
             st.markdown(f"**Subject:** {selected_entry.get('context', 'N/A')}")
             st.markdown(f"**Questions:** {len(selected_entry.get('questions', []))}")
@@ -1283,11 +988,7 @@ with st.sidebar:
             if selected_entry.get("chart_path") and os.path.exists(selected_entry["chart_path"]):
                 st.image(selected_entry["chart_path"])
     
-    if st.button(
-        "🗑️ Clear All History",
-        key="dashboard_clear_history",
-        help="Remove all stored activities"
-    ):
+    if st.button("🗑️ Clear All History", key="dashboard_clear_history"):
         for entry in st.session_state.test_history:
             if entry.get("chart_path") and os.path.exists(entry["chart_path"]):
                 os.remove(entry["chart_path"])
@@ -1299,7 +1000,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("""
-        <div style="text-align: center; color: #666; font-size: 0.9rem;">
+        <div class="footer">
             <p>📱 Sahayak Education Platform v1.0</p>
             <p>© 2025 AI for Education Initiative</p>
         </div>
